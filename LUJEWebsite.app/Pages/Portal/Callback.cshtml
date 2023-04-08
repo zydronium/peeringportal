@@ -1,0 +1,72 @@
+﻿@page
+@using Newtonsoft.Json;
+@using Newtonsoft.Json.Linq;
+@using LUJEWebsite.app.Extentions;
+@using LUJEWebsite.app.Model;
+@using LUJEWebsite.app.Utils;
+@{
+    HttpClient client = new HttpClient();
+    dynamic peers = "";
+
+    // Call asynchronous network methods in a try/catch block to handle exceptions.
+    try
+    {
+        string code = Request.Query["code"].ToString().Trim();
+
+        if (code != null && code != "")
+        {
+            var values = new Dictionary<string, string>
+            {
+                { "grant_type", "authorization_code" },
+                { "code", code },
+                { "redirect_uri", $"https://{Configuration.PortalHostname}/portal/callback" },
+                { "client_id", Configuration.PeeringDBClientID },
+                { "client_secret", Configuration.PeeringDBClientSecret }
+            };
+            var content = new FormUrlEncodedContent(values);
+            var response = await client.PostAsync("https://auth.peeringdb.com/oauth2/token/", content);
+            var responseString = await response.Content.ReadAsStringAsync();
+            dynamic token = JObject.Parse(responseString);
+            if (token.access_token != null)
+            {
+                bool admin = false;
+                string accessToken = token.access_token.ToString();
+                HttpContext.Session.Set<Boolean>("loggedin", true);
+
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
+                HttpResponseMessage responseProfile = await client.GetAsync("https://auth.peeringdb.com/profile/v1");
+                responseProfile.EnsureSuccessStatusCode();
+                string responseProfileString = await responseProfile.Content.ReadAsStringAsync();
+                Profile profile = JsonConvert.DeserializeObject<Profile>(responseProfileString);
+                HttpContext.Session.Set<Profile>("profile", profile);
+                foreach (Network network in profile.networks)
+                {
+                    if (network.asn.ToString() == Configuration.PortalOwnerAsn)
+                    {
+                        admin = true;
+                    }
+                }
+                HttpContext.Session.Set<Boolean>("admin", admin);
+            }
+            else
+            {
+                HttpContext.Session.Set<Boolean>("loggedin", false);
+                HttpContext.Session.Set<Boolean>("admin", false);
+            }
+            Response.Redirect("/portal/");
+            return;
+        }
+        else
+        {
+            HttpContext.Session.Set<Boolean>("loggedin", false);
+            HttpContext.Session.Set<Boolean>("admin", false);
+            Response.Redirect("/portal/");
+            return;
+        }
+    }
+    catch (HttpRequestException e)
+    {
+        Console.WriteLine("\nException Caught!");
+        Console.WriteLine("Message :{0} ", e.Message);
+    }
+}

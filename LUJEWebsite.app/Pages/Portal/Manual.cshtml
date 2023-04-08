@@ -1,0 +1,278 @@
+﻿@page
+@using Newtonsoft.Json.Linq;
+@using LUJEWebsite.app.Extentions;
+@using LUJEWebsite.app.Model;
+@using MySqlConnector;
+@using System.Collections;
+@using LUJEWebsite.app.Utils;
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@{
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+	bool loggedin = false;
+	bool admin = false;
+	string accessToken = "";
+	if (HttpContext.Session.Get<Boolean>("loggedin") != null && HttpContext.Session.Get<Boolean>("loggedin") == true)
+	{
+		loggedin = true;
+	}
+	if (HttpContext.Session.Get<Boolean>("admin") != null && HttpContext.Session.Get<Boolean>("admin") == true)
+	{
+		admin = true;
+	}
+}
+
+@if (!loggedin || !admin)
+{
+	Response.Redirect("/portal/");
+}
+else
+{
+	try
+	{
+		Profile profile = HttpContext.Session.Get<Profile>("profile");
+
+		MySqlConnection peeringdb_conn = new MySqlConnection(Configuration.PeeringDBPath);
+		peeringdb_conn.Open();
+		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		luje_conn.Open();
+
+		string asnQuery = Request.Query["asn"];
+		string asn = "";
+		string networkName = "";
+		string peeringdb_id = "";
+
+		MySqlCommand peeringdb_cmd = new MySqlCommand("select peeringdb_network.id, peeringdb_network.name from peeringdb_network where asn = @asn;", peeringdb_conn);
+		peeringdb_cmd.Prepare();
+		peeringdb_cmd.Parameters.AddWithValue("@asn", asnQuery);
+		MySqlDataReader peeringdb_rdr = peeringdb_cmd.ExecuteReader();
+
+		if (peeringdb_rdr.Read())
+		{
+			asn = "AS" + asnQuery;
+			networkName = peeringdb_rdr["name"].ToString();
+			peeringdb_id = peeringdb_rdr["id"].ToString();
+			peeringdb_rdr.Close();
+		}
+		else
+		{
+			peeringdb_rdr.Close();
+			Response.Redirect("/portal/admin");
+			peeringdb_conn.Close();
+			luje_conn.Close();
+			return;
+		}
+
+		peeringdb_cmd = new MySqlCommand("select peeringdb_network_ixlan.ixlan_id from peeringdb_network_ixlan where asn = @portalowner;", peeringdb_conn);
+		peeringdb_cmd.Prepare();
+		peeringdb_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
+		peeringdb_rdr = peeringdb_cmd.ExecuteReader();
+		var ixlanlist = new ArrayList();
+		while (peeringdb_rdr.Read())
+		{
+			if (!ixlanlist.Contains(peeringdb_rdr["ixlan_id"]))
+			{
+				ixlanlist.Add(peeringdb_rdr["ixlan_id"]);
+			}
+		}
+		peeringdb_rdr.Close();
+
+		peeringdb_cmd = new MySqlCommand("select peeringdb_network_ixlan.id, peeringdb_ix.name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6 from peeringdb_network_ixlan inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id where asn = @asn;", peeringdb_conn);
+		peeringdb_cmd.Prepare();
+		peeringdb_cmd.Parameters.AddWithValue("@asn", asnQuery);
+		peeringdb_rdr = peeringdb_cmd.ExecuteReader();
+
+		MySqlCommand luje_cmd = new MySqlCommand("select peering_active, peering_deployed from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = 0;", luje_conn);
+		luje_cmd.Prepare();
+		luje_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
+		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+
+		bool knownnetwork = false;
+		if(luje_rdr.Read()) {
+			knownnetwork = true;
+		}
+		luje_rdr.Close();
+
+		<div class="columns nine">
+			<h2>Peering Admin</h2>
+			<p><a href="/portal/admin">Admin</a> - <a href="/portal/manual?asn=@asnQuery">@networkName (@asn)</a> - <a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
+			<h3>Manual action</h3>
+
+			<table width="100%">
+				<tr>
+					<td width="20%">IXP</td>
+					<td width="40%">IP Address</td>
+					<td width="20%">Status</td>
+					<td width="20%"></td>
+				</tr>
+				<tr>
+					<td width="20%"></td>
+					<td width="40%"></td>
+					<td width="20%"></td>
+					<td width="20%"></td>
+				</tr>
+				@while (peeringdb_rdr.Read())
+				{
+					if (ixlanlist.Contains(peeringdb_rdr["ixlan_id"]))
+					{
+						if (peeringdb_rdr["ipaddr4"] != null && peeringdb_rdr["ipaddr4"].ToString() != "")
+						{
+							string status = "Not configured";
+							bool requestable = true;
+							if (knownnetwork)
+							{
+								luje_cmd = new MySqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = 0 where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_type = 4 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = 0;", luje_conn);
+								luje_cmd.Prepare();
+								luje_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
+								luje_cmd.Parameters.AddWithValue("@addrid", peeringdb_rdr["id"].ToString());
+								luje_cmd.Parameters.AddWithValue("@lanid", peeringdb_rdr["ixlan_id"].ToString());
+								luje_rdr = luje_cmd.ExecuteReader();
+
+								if (luje_rdr.Read())
+								{
+									requestable = false;
+									if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == false)
+									{
+										status = "Pending approval";
+									}
+									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == true)
+									{
+										status = "Rejected";
+									}
+									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == false)
+									{
+										status = "Pending deployment";
+									}
+									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == true)
+									{
+										status = "Deployed";
+									}
+								}
+								luje_rdr.Close();
+							}
+							<tr>
+								<td width="20%">@peeringdb_rdr["name"].ToString()</td>
+								<td width="40%">@peeringdb_rdr["ipaddr4"].ToString()</td>
+								<td width="20%">@status</td>
+								<td width="20%">
+									@if (requestable)
+									{
+										<a href="/portal/action?asn=@asnQuery&lanid=@peeringdb_rdr["ixlan_id"].ToString()&addrid=@peeringdb_rdr["id"].ToString()&v=4">add</a>
+									}else{
+										<a href="/portal/action?asn=@asnQuery&lanid=@peeringdb_rdr["ixlan_id"].ToString()&addrid=@peeringdb_rdr["id"].ToString()&v=4">delete</a>
+									}
+								</td>
+							</tr>
+						}
+						if (peeringdb_rdr["ipaddr6"] != null && peeringdb_rdr["ipaddr6"].ToString() != "")
+						{
+							string status = "Not configured";
+							bool requestable = true;
+							if (knownnetwork)
+							{
+								luje_cmd = new MySqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = 0 where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_type = 6 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = 0;", luje_conn);
+								luje_cmd.Prepare();
+								luje_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
+								luje_cmd.Parameters.AddWithValue("@addrid", peeringdb_rdr["id"].ToString());
+								luje_cmd.Parameters.AddWithValue("@lanid", peeringdb_rdr["ixlan_id"].ToString());
+								luje_rdr = luje_cmd.ExecuteReader();
+
+								if (luje_rdr.Read())
+								{
+									requestable = false;
+									if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == false)
+									{
+										status = "Pending approval";
+									}
+									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == true)
+									{
+										status = "Rejected";
+									}
+									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == false)
+									{
+										status = "Pending deployment";
+									}
+									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == true)
+									{
+										status = "Deployed";
+									}
+								}
+								luje_rdr.Close();
+							}
+							<tr>
+								<td width="20%">@peeringdb_rdr["name"].ToString()</td>
+								<td width="40%">@peeringdb_rdr["ipaddr6"].ToString()</td>
+								<td width="20%">@status</td>
+								<td width="20%">
+									@if (requestable)
+									{
+										<a href="/portal/action?asn=@asnQuery&lanid=@peeringdb_rdr["ixlan_id"].ToString()&addrid=@peeringdb_rdr["id"].ToString()&v=6">add</a>
+									}else{
+										<a href="/portal/action?asn=@asnQuery&lanid=@peeringdb_rdr["ixlan_id"].ToString()&addrid=@peeringdb_rdr["id"].ToString()&v=6">delete</a>
+									}
+								</td>
+							</tr>
+						}
+					}
+				}
+			</table>
+
+			<h3>Extra IPs</h3>
+			@{
+				luje_cmd = new MySqlCommand("select peering_ips_extra_active, peering_ips_extra_deployed, peering_ips_extra_addr, peering_ips_extra_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra_peering_id and peering_deleted = 0 where peering_peeringdb_id = @peeringdb_id and peering_ips_extra_deleted = 0;", luje_conn);
+				luje_cmd.Prepare();
+				luje_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
+				luje_rdr = luje_cmd.ExecuteReader();
+			}
+			<form method="post" action="/portal/extra?asn=@asnQuery">
+				<input type="hidden" name="__RequestVerificationToken" value="@Xsrf.GetAndStoreTokens(Model.HttpContext).RequestToken" />
+				<table width="100%">
+					<tr>
+						<td width="60%">IP Address</td>
+						<td width="20%">Status</td>
+						<td width="20%"></td>
+					</tr>
+					<tr>
+						<td width="60%"></td>
+						<td width="20%"></td>
+						<td width="20%"></td>
+					</tr>
+					@while (luje_rdr.Read())
+					{
+						string status = "Not configured";
+						if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == false)
+						{
+							status = "Pending approval";
+						}
+						else if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_extra_deployed"]) == false)
+						{
+							status = "Pending deployment";
+						}
+						else if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_extra_deployed"]) == true)
+						{
+							status = "Deployed";
+						}
+						<tr>
+							<td width="60%">@luje_rdr["peering_ips_extra_addr"].ToString()</td>
+							<td width="20%">@status</td>
+							<td width="20%"><a href="/portal/extra?asn=@asnQuery&delete=@luje_rdr["peering_ips_extra_id"].ToString()">delete</a></td>
+						</tr>
+					}
+					<tr>
+						<td width="60%"><input name="addr" type="text" style="width:100%"/></td>
+						<td width="20%"></td>
+						<td width="20%"><input type="submit" value="add"/></td>
+					</tr>
+				</table>
+			</form>
+
+		</div>
+		peeringdb_conn.Close();
+		luje_conn.Close();
+	}
+	catch (HttpRequestException e)
+	{
+		Console.WriteLine("\nException Caught!");
+		Console.WriteLine("Message :{0} ", e.Message);
+	}
+}

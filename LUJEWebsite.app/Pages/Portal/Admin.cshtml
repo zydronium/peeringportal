@@ -1,0 +1,68 @@
+﻿@page
+@using Newtonsoft.Json.Linq;
+@using LUJEWebsite.app.Extentions;
+@using LUJEWebsite.app.Model;
+@using LUJEWebsite.app.Utils;
+@using MySqlConnector;
+@{
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+	bool loggedin = false;
+	bool admin = false;
+	string accessToken = "";
+	if (HttpContext.Session.Get<Boolean>("loggedin") != null && HttpContext.Session.Get<Boolean>("loggedin") == true)
+	{
+		loggedin = true;
+	}
+	if (HttpContext.Session.Get<Boolean>("admin") != null && HttpContext.Session.Get<Boolean>("admin") == true)
+	{
+		admin = true;
+	}
+}
+
+@if (!loggedin || !admin)
+{
+	Response.Redirect("/portal/");
+}
+else
+{
+	try
+	{
+		Profile profile = HttpContext.Session.Get<Profile>("profile");
+
+		MySqlConnection peeringdb_conn = new MySqlConnection(Configuration.PeeringDBPath);
+		peeringdb_conn.Open();
+		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		luje_conn.Open();
+
+		MySqlCommand luje_cmd = new MySqlCommand("select count(peering_ips.peering_ips_id) as count from peering_ips where peering_ips_active = 0 and peering_ips_rejected = 0 and peering_ips_deleted = 0;", luje_conn);
+		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+
+		string countApproval = "";
+		if (luje_rdr.Read())
+		{
+			countApproval = luje_rdr["count"].ToString();
+		}
+		luje_rdr.Close();
+
+		<div class="columns nine">
+			<h2>Peering Admin</h2>
+			<p><a href="/portal/admin">Admin</a> - <a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
+			<h3>Approvals</h3>
+			<p>There are @countApproval <a href="/portal/approvals">pending approvals</a></p>
+			<h3>Manual action</h3>
+			<form method="get" action="/portal/manual">
+				<label for="asn">ASN</label>
+				<input name="asn" type="number"/><br>
+				<input type="submit" value="select"/>
+			</form>
+		</div>
+		peeringdb_conn.Close();
+		luje_conn.Close();
+	}
+	catch (HttpRequestException e)
+	{
+		Console.WriteLine("\nException Caught!");
+		Console.WriteLine("Message :{0} ", e.Message);
+	}
+}

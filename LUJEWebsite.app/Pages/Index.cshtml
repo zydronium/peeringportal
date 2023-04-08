@@ -1,0 +1,67 @@
+﻿@page
+@using MySqlConnector;
+@using System.Collections;
+@using LUJEWebsite.app.Utils;
+@{
+	ViewData["Title"] = "Home";
+	var ixList = new ArrayList();
+	var facList = new ArrayList();
+
+	try
+	{
+		MySqlConnection peeringdb_conn = new MySqlConnection(Configuration.PeeringDBPath);
+		peeringdb_conn.Open();
+
+		MySqlCommand peeringdb_cmd = new MySqlCommand("select peeringdb_ix.name, peeringdb_ix.name_long from peeringdb_network_ixlan inner join peeringdb_ixlan on peeringdb_network_ixlan.ixlan_id = peeringdb_ixlan.id inner join peeringdb_ix on peeringdb_ixlan.ix_id = peeringdb_ix.id where peeringdb_network_ixlan.asn = @portalowner;", peeringdb_conn);
+		peeringdb_cmd.Prepare();
+		peeringdb_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
+		MySqlDataReader peeringdb_rdr = peeringdb_cmd.ExecuteReader();
+		while (peeringdb_rdr.Read())
+		{
+			var ix = new { name = peeringdb_rdr["name"].ToString(), name_long = peeringdb_rdr["name_long"].ToString() };
+			ixList.Add(ix);
+		}
+		peeringdb_rdr.Close();
+
+		peeringdb_cmd = new MySqlCommand("select peeringdb_facility.name from peeringdb_network_facility inner join peeringdb_facility on peeringdb_network_facility.fac_id = peeringdb_facility.id where peeringdb_network_facility.local_asn = @portalowner;", peeringdb_conn);
+		peeringdb_cmd.Prepare();
+		peeringdb_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
+		peeringdb_rdr = peeringdb_cmd.ExecuteReader();
+		while (peeringdb_rdr.Read())
+		{
+			var fac = new { name = peeringdb_rdr["name"].ToString() };
+			facList.Add(fac);
+		}
+		peeringdb_rdr.Close();
+		peeringdb_conn.Close();
+	}
+	catch (HttpRequestException e)
+	{
+		Console.WriteLine("\nException Caught!");
+		Console.WriteLine("Message :{0} ", e.Message);
+	}
+}
+
+<div class="columns nine">
+	<h2>Welcome to LUJE.net - AS212855</h2>
+
+	<p>Connected internet exchanges:</p>
+	<ul>
+		@foreach(dynamic ix in ixList)
+		{
+			<li>- @ix.name - @ix.name_long</li>
+		}
+	</ul>
+	<p>Facilities:</p>
+	<ul>
+		@foreach (dynamic fac in facList)
+		{
+			<li>- @fac.name</li>
+		}
+	</ul>
+	<p>Prefixes originating from AS212855:</p>
+	<ul>
+		<li>- 185.36.229.0/24</li>
+		<li>- 2a07:cd40::/29</li>
+	</ul>
+</div>

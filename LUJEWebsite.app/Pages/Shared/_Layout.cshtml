@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<link rel="shortcut icon" href="/favicon.ico" />
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta name="viewport" content="width=device-width" />
+        <title>@ViewData["Title"] - LUJE.net</title>
+		<link href="/assets/foundation.css" rel="stylesheet" type="text/css">
+		<link href="/assets/stylesheet.css" rel="stylesheet" type="text/css">
+	</head>
+	<body>
+		<div id="content" class="container">
+			<div class="row">
+				<section class="clearfix title">
+					<div class="column twelve">
+						<h1>LUJE.net</h1>
+					</div>
+				</section>
+			</div>
+			<div class="row">
+		
+				<div class="divider"><!-- --></div>
+				<section class="clearfix">
+					<div class="columns three">
+						<h4>Menu</h4>
+						<ul class="stlist">
+							<li><a href="/">Home</a></li>
+							<li><a href="/policy">Policy</a></li>
+							<li><a href="/communities">BGP Communities</a></li>
+							<li><a href="/peers">Peers</a></li>
+							<li><a href="/portal/">Peering Portal</a></li>
+						</ul>
+					</div>
+					@RenderBody()
+				</section>
+			</div>
+		</div>
+	</body>
+	
+    @await RenderSectionAsync("Scripts", required: false)
+</html>

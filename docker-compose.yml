@@ -1,0 +1,96 @@
+version: "3"
+services:
+  peeringdb:
+    image: mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: <snip>
+      MYSQL_DATABASE: peeringdb
+      MYSQL_USER: peeringdb
+      MYSQL_PASSWORD: <snip>
+    volumes:
+      - ./peeringdb-data:/var/lib/mysql
+  db:
+    image: mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: <snip>
+      MYSQL_DATABASE: luje
+      MYSQL_USER: luje
+      MYSQL_PASSWORD: <snip>
+    volumes:
+      - ./db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+  sync:
+    image: PeeringDB-Sync
+    restart: unless-stopped
+    entrypoint: /bin/sh -c 'while [ 1 ]; do sleep 1000; done'
+    depends_on:
+      - peeringdb
+    volumes:
+      - ./config.yaml:/root/.peeringdb/config.yaml
+  web:
+    image: LUJEWebsite.app
+    restart: unless-stopped
+    environment:
+      DATABASE_SERVER: db
+      DATABASE_USER: luje
+      DATABASE_PASSWORD: <snip>
+      DATABASE_NAME: luje
+      PEERINGDB_SERVER: peeringdb
+      PEERINGDB_USER: peeringdb
+      PEERINGDB_PASSWORD: <snip>
+      PEERINGDB_NAME: peeringdb
+      PORTAL_HOSTNAME: www.luje.net
+      PORTAL_OWNER_ASN: 212855
+      PORTAL_EXPORT: AS212855:AS-LUJE
+      PEERINGDB_CLIENTID: <snip>
+      PEERINGDB_CLIENTSECRET: <snip>
+    ports:
+      - "2040:80"
+    depends_on:
+      - peeringdb
+      - db
+  mailer:
+    image: LUJEWebsite.Mailer
+    restart: unless-stopped
+    environment:
+      DATABASE_SERVER: db
+      DATABASE_USER: luje
+      DATABASE_PASSWORD: <snip>
+      DATABASE_NAME: luje
+      PEERINGDB_SERVER: peeringdb
+      PEERINGDB_USER: peeringdb
+      PEERINGDB_PASSWORD: <snip>
+      PEERINGDB_NAME: peeringdb
+      MAIL_SERVER: mail-server
+      MAIL_PORT: 587
+      MAIL_USER: <snip>
+      MAIL_PASSWORD: <snip>
+      MAIL_FROM: hostmaster@luje.net
+    depends_on:
+      - peeringdb
+      - db
+  ofelia:
+    image: mcuadros/ofelia:latest
+    restart: unless-stopped
+    command: daemon --config=/schedule.ini
+    depends_on:
+      - sync
+      - mailer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./schedule.ini:/schedule.ini
+        
+networks: 
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-luje
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.22.4.0/24
+        - subnet: fd4d:6169:6c63:4::/64

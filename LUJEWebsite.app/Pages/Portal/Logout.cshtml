@@ -1,0 +1,9 @@
+﻿@page
+@using LUJEWebsite.app.Extentions;
+@using LUJEWebsite.app.Model;
+@{
+    HttpContext.Session.Set<Boolean>("loggedin", false);
+    HttpContext.Session.Set<Profile>("profile", new Profile());
+    HttpContext.Session.Set<Boolean>("admin", false);
+    Response.Redirect("/portal/");
+}

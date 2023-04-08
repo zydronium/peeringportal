@@ -1,0 +1,21 @@
+﻿@page
+@using MySqlConnector;
+@using LUJEWebsite.app.Utils;
+@{
+    Response.ContentType = "text/plain";
+    Layout = null;
+    MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+    luje_conn.Open();
+
+    MySqlCommand luje_cmd = new MySqlCommand("update peering set peering_deployed = '1', peering_modified = NOW() where peering_active = '1' and peering_deployed = '0' and peering_deleted = '0';", luje_conn);
+    luje_cmd.ExecuteNonQuery();
+
+    luje_cmd = new MySqlCommand("update peering_ips set peering_ips_deployed = '1', peering_ips_modified = NOW() where peering_ips_active = '1' and peering_ips_deployed = '0' and peering_ips_deleted = '0';", luje_conn);
+    luje_cmd.ExecuteNonQuery();
+
+    luje_cmd = new MySqlCommand("update peering_ips_extra set peering_ips_extra_deployed = '1', peering_ips_extra_modified = NOW() where peering_ips_extra_active = '1' and peering_ips_extra_deployed = '0' and peering_ips_extra_deleted = '0';", luje_conn);
+    luje_cmd.ExecuteNonQuery();
+
+    luje_conn.Close();
+    Response.WriteAsync("OK");
+}

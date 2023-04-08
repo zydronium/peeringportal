@@ -1,0 +1,16 @@
+orm:
+  backend: django_peeringdb
+  database:
+    engine: mysql
+    host: peeringdb
+    name: peeringdb
+    password: <snip>
+    user: peeringdb
+  migrate: true
+  secret_key: ''
+sync:
+  api_key: <snip>
+  only: []
+  strip_tz: 1
+  timeout: 0
+  url: https://www.peeringdb.com/api

@@ -1,0 +1,56 @@
+﻿@page
+@using MySqlConnector;
+@using LUJEWebsite.app.Utils;
+@{
+    ViewData["Title"] = "Peers";
+    try	
+    {
+		MySqlConnection peeringdb_conn = new MySqlConnection(Configuration.PeeringDBPath);
+		peeringdb_conn.Open();
+		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		luje_conn.Open();
+		MySqlCommand luje_cmd = new MySqlCommand("select peering.peering_peeringdb_id from peering where peering_active = 1 and peering_deleted = 0;", luje_conn);
+		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+
+		<div class="columns nine">
+			<h2>Peers</h2>
+			<p>LUJE.net is connected with the following networks on mutual exchange points:</p>
+			<table width="100%">
+				<tr>
+					<td width="20%">AS Number</td>
+					<td width="80%">Name</td>
+				</tr>
+				<tr>
+					<td width="20%"></td>
+					<td width="80%"></td>
+				</tr>
+				@while (luje_rdr.Read())
+				{
+					string peeringdb_id = luje_rdr["peering_peeringdb_id"].ToString();
+					MySqlCommand peeringdb_cmd = new MySqlCommand("select name, asn from peeringdb_network where id = @peeringdb_id;", peeringdb_conn);
+					peeringdb_cmd.Prepare();
+					peeringdb_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
+					MySqlDataReader peeringdb_rdr = peeringdb_cmd.ExecuteReader();
+					if (peeringdb_rdr.Read())
+					{
+						string asn = "AS" + peeringdb_rdr["asn"].ToString();
+						string name = peeringdb_rdr["name"].ToString();
+						<tr>
+							<td width="20%">@asn</td>
+							<td width="80%">@name</td>
+						</tr>
+					}
+					peeringdb_rdr.Close();
+				}
+			</table>
+		</div>
+		luje_rdr.Close();
+		peeringdb_conn.Close();
+		luje_conn.Close();
+	}
+    catch(HttpRequestException e)
+    {
+        Console.WriteLine("\nException Caught!");	
+        Console.WriteLine("Message :{0} ",e.Message);
+    }
+}

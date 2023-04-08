@@ -1,0 +1,98 @@
+﻿@page
+@{
+    ViewData["Title"] = "Communities";
+}
+
+<div class="columns nine">
+	<h2>BGP Communities</h2>
+	<p>LUJE.net uses the following communities:</p>
+	<table width="100%">
+		<tr>
+			<td>Large</td>
+			<td width="100%">Meaning (Informational)</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td width="100%"></td>
+		</tr>
+		<tr>
+			<td>212855:0:1</td>
+			<td width="100%">peering routes</td>
+		</tr>
+		<tr>
+			<td>212855:0:2</td>
+			<td width="100%">downstream routes</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td width="100%"></td>
+		</tr>
+		<tr>
+			<td>212855:5:1</td>
+			<td width="100%">Accepted from peer because of valid IRR entry</td>
+		</tr>
+		<tr>
+			<td>212855:5:2</td>
+			<td width="100%">Accepted from peer because of valid ROA</td>
+		</tr>
+		<tr>
+			<td>212855:5:3</td>
+			<td width="100%">matching valid ROA exists</td>
+		</tr>
+		<tr>
+			<td>212855:5:4</td>
+			<td width="100%">Accepted while RPKI invalid because it is added to our whitelist</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td width="100%"></td>
+		</tr>
+		<tr>
+			<td>212855:6:1</td>
+			<td width="100%">received from Netwerkvereniging Coloclue</td>
+		</tr>
+		<tr>
+			<td>212855:6:2</td>
+			<td width="100%">received from IPng Networks GmbH</td>
+		</tr>
+		<tr>
+			<td>212855:6:3</td>
+			<td width="100%">received from FREETRANSIT</td>
+		</tr>
+	</table>
+						
+	<table width="100%">
+		<tr>
+			<td>Large</td>
+			<td width="100%">Rejection Reasons</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td width="100%"></td>
+		</tr>
+		<tr>
+			<td>212855:7:1</td>
+			<td width="100%">More specifics covering AS212855 space are considered hijacks</td>
+		</tr>
+		<tr>
+			<td>212855:7:2</td>
+			<td width="100%">Somewhere in the AS_PATH a Bogon ASN is present (0, 23456, 64496..65534, 4200000000+)</td>
+		</tr>
+		<tr>
+			<td>212855:7:3</td>
+			<td width="100%">The prefix is Bogon garbage (rfc1918, rfc4291 etc)</td>
+		</tr>
+		<tr>
+			<td>212855:7:4</td>
+			<td width="100%">The prefix is an RPKI Invalid and as such rejected</td>
+		</tr>
+		<tr>
+			<td>212855:7:5</td>
+			<td width="100%">The route's prefix length is unacceptable (too small or too large)</td>
+		</tr>
+		<tr>
+			<td>212855:7:6</td>
+			<td width="100%">There is no IRR object that covers this route announcement</td>
+		</tr>
+	</table>
+</div>

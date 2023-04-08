@@ -1,0 +1,5 @@
+﻿@page
+@using LUJEWebsite.app.Utils;
+@{
+    Response.Redirect($"https://auth.peeringdb.com/oauth2/authorize/?client_id={Configuration.PeeringDBClientID}&redirect_uri=https://{Configuration.PortalHostname}/portal/callback&scope=profile+email+networks&response_type=code");
+}

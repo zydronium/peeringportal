@@ -1,0 +1,56 @@
+﻿@page
+@using Newtonsoft.Json.Linq;
+@using LUJEWebsite.app.Extentions;
+@using LUJEWebsite.app.Model;
+@using LUJEWebsite.app.Utils;
+@{
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+	bool loggedin = false;
+	bool admin = false;
+	string accessToken = "";
+	if (HttpContext.Session.Get<Boolean>("loggedin") != null && HttpContext.Session.Get<Boolean>("loggedin") == true)
+	{
+		loggedin = true;
+	}
+	if (HttpContext.Session.Get<Boolean>("admin") != null && HttpContext.Session.Get<Boolean>("admin") == true)
+	{
+		admin = true;
+	}
+}
+
+@if(!loggedin)
+{
+	<div class="columns nine">
+		<h2>Peering Portal</h2>
+		<p>You can request peering with LUJE.net via the Peering Portal.</p>
+		<p>Simply login with your PeeringDB account and the Peering Portal will tell you at which internet exchange you can establish sessions and configure it automatically.</p>
+		<p><a href="/portal/login">Login with<br /><img src="~/assets/pdb-logo-coloured.png" /></a></p>
+	</div>
+}
+else
+{
+	try
+	{
+		Profile profile = HttpContext.Session.Get<Profile>("profile");
+
+		<div class="columns nine">
+			<h2>Peering Portal</h2>
+			<p>@if (admin) {<span><a href="/portal/admin">Admin</a> -  </span>}<a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
+			<p>Welcome @profile.given_name.</p>
+			<p>Pick a network:</p>
+			<ul>
+				@foreach (Network network in profile.networks)
+				{
+					string asn = "AS" + network.asn;
+					<li>- <a href="/portal/network?asn=@network.asn">@network.name (@asn)</a></li>
+				}
+			</ul>
+		</div>
+	}
+    catch (HttpRequestException e)
+    {
+        Console.WriteLine("\nException Caught!");
+        Console.WriteLine("Message :{0} ", e.Message);
+    }
+}
