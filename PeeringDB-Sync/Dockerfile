@@ -8,6 +8,6 @@ RUN mkdir /root/peeringdb-py && \
 	pip install -U setuptools && \
 	pip install git+https://github.com/peeringdb/django-peeringdb.git && \
 	pip install git+https://github.com/peeringdb/peeringdb-py.git && \
-	pip install "django<3" && \
+	pip install "django" && \
 	pip install asgiref && \
 	pip install mysqlclient
