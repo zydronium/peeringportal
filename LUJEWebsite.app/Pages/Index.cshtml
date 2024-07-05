@@ -9,31 +9,31 @@
 
 	try
 	{
-		MySqlConnection peeringdb_conn = new MySqlConnection(Configuration.PeeringDBPath);
-		peeringdb_conn.Open();
+		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		luje_conn.Open();
 
-		MySqlCommand peeringdb_cmd = new MySqlCommand("select peeringdb_ix.name, peeringdb_ix.name_long from peeringdb_network_ixlan inner join peeringdb_ixlan on peeringdb_network_ixlan.ixlan_id = peeringdb_ixlan.id inner join peeringdb_ix on peeringdb_ixlan.ix_id = peeringdb_ix.id where peeringdb_network_ixlan.asn = @portalowner;", peeringdb_conn);
-		peeringdb_cmd.Prepare();
-		peeringdb_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
-		MySqlDataReader peeringdb_rdr = peeringdb_cmd.ExecuteReader();
-		while (peeringdb_rdr.Read())
+		MySqlCommand luje_cmd = new MySqlCommand("select peeringdb_ix.name, peeringdb_ix.name_long from peeringdb.peeringdb_network_ixlan inner join peeringdb.peeringdb_ixlan on peeringdb_network_ixlan.ixlan_id = peeringdb_ixlan.id inner join peeringdb.peeringdb_ix on peeringdb_ixlan.ix_id = peeringdb_ix.id where peeringdb_network_ixlan.asn = @portalowner;", luje_conn);
+		luje_cmd.Prepare();
+		luje_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
+		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+		while (luje_rdr.Read())
 		{
-			var ix = new { name = peeringdb_rdr["name"].ToString(), name_long = peeringdb_rdr["name_long"].ToString() };
+			var ix = new { name = luje_rdr["name"].ToString(), name_long = luje_rdr["name_long"].ToString() };
 			ixList.Add(ix);
 		}
-		peeringdb_rdr.Close();
+		luje_rdr.Close();
 
-		peeringdb_cmd = new MySqlCommand("select peeringdb_facility.name from peeringdb_network_facility inner join peeringdb_facility on peeringdb_network_facility.fac_id = peeringdb_facility.id where peeringdb_network_facility.local_asn = @portalowner;", peeringdb_conn);
-		peeringdb_cmd.Prepare();
-		peeringdb_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
-		peeringdb_rdr = peeringdb_cmd.ExecuteReader();
-		while (peeringdb_rdr.Read())
+		luje_cmd = new MySqlCommand("select peeringdb_facility.name from peeringdb.peeringdb_network_facility inner join peeringdb.peeringdb_facility on peeringdb_network_facility.fac_id = peeringdb_facility.id where peeringdb_network_facility.local_asn = @portalowner;", luje_conn);
+		luje_cmd.Prepare();
+		luje_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
+		luje_rdr = luje_cmd.ExecuteReader();
+		while (luje_rdr.Read())
 		{
-			var fac = new { name = peeringdb_rdr["name"].ToString() };
+			var fac = new { name = luje_rdr["name"].ToString() };
 			facList.Add(fac);
 		}
-		peeringdb_rdr.Close();
-		peeringdb_conn.Close();
+		luje_rdr.Close();
+		luje_conn.Close();
 	}
 	catch (HttpRequestException e)
 	{
@@ -49,7 +49,14 @@
 	<ul>
 		@foreach(dynamic ix in ixList)
 		{
-			<li>- @ix.name - @ix.name_long</li>
+			if (string.IsNullOrEmpty(ix.name_long))
+			{
+				<li>- @ix.name</li>
+			}
+			else
+			{
+				<li>- @ix.name - @ix.name_long</li>
+			}
 		}
 	</ul>
 	<p>Facilities:</p>

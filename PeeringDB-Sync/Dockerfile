@@ -1,13 +1,14 @@
-FROM debian:bullseye-slim
+FROM alpine:latest
+RUN apk add --no-cache python3 py3-pip git mariadb-client mariadb-dev unixodbc-dev build-base python3-dev
 
-RUN mkdir /root/peeringdb-py && \
-    cd /root/peeringdb-py && \
-	apt-get update && \
-    apt-get install -y python3-pip git mariadb-client libmariadb-dev && \
-	pip install --upgrade pip && \
-	pip install -U setuptools && \
-	pip install git+https://github.com/peeringdb/django-peeringdb.git && \
-	pip install git+https://github.com/peeringdb/peeringdb-py.git && \
-	pip install "django" && \
-	pip install asgiref && \
-	pip install mysqlclient
+RUN mkdir /root/peeringdb-py
+WORKDIR /root/peeringdb-py
+
+# Create and activate a virtual environment
+RUN rm /usr/lib/python3*/EXTERNALLY-MANAGED && pip install setuptools git+https://github.com/peeringdb/django-peeringdb.git git+https://github.com/peeringdb/peeringdb-py.git django asgiref mysqlclient mssql-django
+
+# Clean up unnecessary packages
+RUN apk del build-base python3-dev
+
+# Set the default command for the container
+CMD ["python"]

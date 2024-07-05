@@ -1,17 +1,12 @@
-version: "3"
 services:
-  peeringdb:
-    image: mariadb
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: <snip>
-      MYSQL_DATABASE: peeringdb
-      MYSQL_USER: peeringdb
-      MYSQL_PASSWORD: <snip>
-    volumes:
-      - ./peeringdb-data:/var/lib/mysql
+#  tunnel:
+#    image: cloudflare/cloudflared:latest
+#    restart: unless-stopped
+#    command: tunnel --no-autoupdate run
+#    environment:
+#      TUNNEL_TOKEN: eyJhIjoiY2M0NzUxM2EzNjdjMzE4Yjg3MGE2MzIwNDk1NzdkYzUiLCJ0IjoiMzMxNmUyZTctNGY2YS00ZmQ4LWI5ODAtYzI2MGEwYTRiZTdlIiwicyI6Ik4yWmlOV1ZoTjJNdE5XWXpZUzAwT1dKa0xXRmtZall0TldGaU5EVTJNR1F3TW1aayJ9
   db:
-    image: mariadb
+    image: mariadb:lts
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: <snip>
@@ -20,57 +15,66 @@ services:
       MYSQL_PASSWORD: <snip>
     volumes:
       - ./db-data:/var/lib/mysql
-    ports:
-      - "3306:3306"
   sync:
-    image: PeeringDB-Sync
+    image: git.luje.net/docker/website/luje:sync
     restart: unless-stopped
     entrypoint: /bin/sh -c 'while [ 1 ]; do sleep 1000; done'
     depends_on:
-      - peeringdb
+      - db
     volumes:
       - ./config.yaml:/root/.peeringdb/config.yaml
   web:
-    image: LUJEWebsite.app
+    image: git.luje.net/docker/website/luje:web
     restart: unless-stopped
     environment:
       DATABASE_SERVER: db
       DATABASE_USER: luje
       DATABASE_PASSWORD: <snip>
       DATABASE_NAME: luje
-      PEERINGDB_SERVER: peeringdb
-      PEERINGDB_USER: peeringdb
-      PEERINGDB_PASSWORD: <snip>
-      PEERINGDB_NAME: peeringdb
       PORTAL_HOSTNAME: www.luje.net
       PORTAL_OWNER_ASN: 212855
       PORTAL_EXPORT: AS212855:AS-LUJE
       PEERINGDB_CLIENTID: <snip>
       PEERINGDB_CLIENTSECRET: <snip>
     ports:
-      - "2040:80"
+      - "2040:8080"
     depends_on:
-      - peeringdb
       - db
   mailer:
-    image: LUJEWebsite.Mailer
+    image: git.luje.net/docker/website/luje:mailer
     restart: unless-stopped
+    entrypoint: /bin/sh -c 'while [ 1 ]; do sleep 1000; done'
     environment:
       DATABASE_SERVER: db
       DATABASE_USER: luje
       DATABASE_PASSWORD: <snip>
       DATABASE_NAME: luje
-      PEERINGDB_SERVER: peeringdb
-      PEERINGDB_USER: peeringdb
-      PEERINGDB_PASSWORD: <snip>
-      PEERINGDB_NAME: peeringdb
       MAIL_SERVER: mail-server
-      MAIL_PORT: 587
+      MAIL_PORT: 25
       MAIL_USER: <snip>
       MAIL_PASSWORD: <snip>
       MAIL_FROM: hostmaster@luje.net
+      MAIL_TLS: <snip>
     depends_on:
-      - peeringdb
+      - db
+  peering:
+    image: git.luje.net/docker/website/luje:peering
+    restart: unless-stopped
+    entrypoint: /bin/sh -c 'while [ 1 ]; do sleep 1000; done'
+    environment:
+      DATABASE_SERVER: db
+      DATABASE_USER: luje
+      DATABASE_PASSWORD: <snip>
+      DATABASE_NAME: luje
+      PORTAL_OWNER_ASN: 212855
+      PORTAL_EXPORT: AS212855:AS-LUJE
+      PORTAL_RIPE_PASSWORD: <snip>
+      ROUTEFILTERS_LOCATION: /opt/routefilters
+    volumes:
+      - ./routefilters:/opt/routefilters
+      - ./ssh:/root/.ssh
+      - ./peeringconfig.json:/app/peeringconfig.json
+    depends_on:
       - db
   ofelia:
     image: mcuadros/ofelia:latest
@@ -79,6 +83,7 @@ services:
     depends_on:
       - sync
       - mailer
+      - peering
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./schedule.ini:/schedule.ini

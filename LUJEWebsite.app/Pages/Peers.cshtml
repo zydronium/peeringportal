@@ -5,11 +5,9 @@
     ViewData["Title"] = "Peers";
     try	
     {
-		MySqlConnection peeringdb_conn = new MySqlConnection(Configuration.PeeringDBPath);
-		peeringdb_conn.Open();
 		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
 		luje_conn.Open();
-		MySqlCommand luje_cmd = new MySqlCommand("select peering.peering_peeringdb_id from peering where peering_active = 1 and peering_deleted = 0;", luje_conn);
+		MySqlCommand luje_cmd = new MySqlCommand("select peeringdb_network.name, peeringdb_network.asn from luje.peering INNER JOIN peeringdb.peeringdb_network ON peeringdb_network.id = peering_peeringdb_id where peering_active = 1 and peering_deleted = 0 order by cast(peering_asn as unsigned) asc;", luje_conn);
 		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 
 		<div class="columns nine">
@@ -26,26 +24,16 @@
 				</tr>
 				@while (luje_rdr.Read())
 				{
-					string peeringdb_id = luje_rdr["peering_peeringdb_id"].ToString();
-					MySqlCommand peeringdb_cmd = new MySqlCommand("select name, asn from peeringdb_network where id = @peeringdb_id;", peeringdb_conn);
-					peeringdb_cmd.Prepare();
-					peeringdb_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
-					MySqlDataReader peeringdb_rdr = peeringdb_cmd.ExecuteReader();
-					if (peeringdb_rdr.Read())
-					{
-						string asn = "AS" + peeringdb_rdr["asn"].ToString();
-						string name = peeringdb_rdr["name"].ToString();
-						<tr>
-							<td width="20%">@asn</td>
-							<td width="80%">@name</td>
-						</tr>
-					}
-					peeringdb_rdr.Close();
+					string asn = "AS" + luje_rdr["asn"].ToString();
+					string name = luje_rdr["name"].ToString();
+					<tr>
+						<td width="20%">@asn</td>
+						<td width="80%">@name</td>
+					</tr>
 				}
 			</table>
 		</div>
 		luje_rdr.Close();
-		peeringdb_conn.Close();
 		luje_conn.Close();
 	}
     catch(HttpRequestException e)

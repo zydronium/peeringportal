@@ -1,0 +1,13 @@
+﻿namespace LUJEWebsite.app.Model
+{
+	public class NetworkEntry
+	{
+		public string id { get; set; }
+		public string name { get; set; }
+		public string ixlan_id { get; set; }
+		public string net_id { get; set; }
+		public string ipaddr4 { get; set; }
+		public string ipaddr6 { get; set; }
+
+	}
+}

@@ -5,9 +5,14 @@ VisualStudioVersion = 17.2.32616.157
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LUJEWebsite.app", "LUJEWebsite.app\LUJEWebsite.app.csproj", "{82DA2F65-7F1B-44FC-9294-C071A42B3896}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PeeringDB-Sync", "PeeringDB-Sync\PeeringDB-Sync.csproj", "{7EFD11AF-F7F0-492C-8625-E1455AFA9D65}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LUJEWebsite.Mailer", "LUJEWebsite.Mailer\LUJEWebsite.Mailer.csproj", "{A5EBD024-50F0-49C8-B21A-E4BBE305A2A8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LUJEWebsite.Mailer", "LUJEWebsite.Mailer\LUJEWebsite.Mailer.csproj", "{A5EBD024-50F0-49C8-B21A-E4BBE305A2A8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LUJEWebsite.PeeringGenerator", "LUJEWebsite.PeeringGenerator\LUJEWebsite.PeeringGenerator.csproj", "{B71B0A00-E42E-47AB-8550-57AB4D73A72F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PeeringDB-Sync", "PeeringDB-Sync", "{E90FB123-6A23-4C95-9C49-EF57689221DD}"
+	ProjectSection(SolutionItems) = preProject
+		PeeringDB-Sync\Dockerfile = PeeringDB-Sync\Dockerfile
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,14 +24,14 @@ Global
 		{82DA2F65-7F1B-44FC-9294-C071A42B3896}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{82DA2F65-7F1B-44FC-9294-C071A42B3896}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{82DA2F65-7F1B-44FC-9294-C071A42B3896}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7EFD11AF-F7F0-492C-8625-E1455AFA9D65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7EFD11AF-F7F0-492C-8625-E1455AFA9D65}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7EFD11AF-F7F0-492C-8625-E1455AFA9D65}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7EFD11AF-F7F0-492C-8625-E1455AFA9D65}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A5EBD024-50F0-49C8-B21A-E4BBE305A2A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A5EBD024-50F0-49C8-B21A-E4BBE305A2A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5EBD024-50F0-49C8-B21A-E4BBE305A2A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5EBD024-50F0-49C8-B21A-E4BBE305A2A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B71B0A00-E42E-47AB-8550-57AB4D73A72F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B71B0A00-E42E-47AB-8550-57AB4D73A72F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B71B0A00-E42E-47AB-8550-57AB4D73A72F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B71B0A00-E42E-47AB-8550-57AB4D73A72F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

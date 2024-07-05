@@ -13,17 +13,6 @@
                 return String.Format("Server={0};Database={1};Uid={2};Pwd={3};", server, name, user, password);
             }
         }
-        public static string PeeringDBPath
-        {
-            get
-            {
-                string server = Environment.GetEnvironmentVariable("PEERINGDB_SERVER");
-                string user = Environment.GetEnvironmentVariable("PEERINGDB_USER");
-                string password = Environment.GetEnvironmentVariable("PEERINGDB_PASSWORD");
-                string name = Environment.GetEnvironmentVariable("PEERINGDB_NAME");
-                return String.Format("Server={0};Database={1};Uid={2};Pwd={3};", server, name, user, password);
-            }
-		}
 		public static string PortalHostname
 		{
 			get

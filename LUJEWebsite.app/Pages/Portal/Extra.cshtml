@@ -31,8 +31,6 @@ else
 	{
 		Profile profile = HttpContext.Session.Get<Profile>("profile");
 
-		MySqlConnection peeringdb_conn = new MySqlConnection(Configuration.PeeringDBPath);
-		peeringdb_conn.Open();
 		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
 		luje_conn.Open();
 
@@ -42,19 +40,19 @@ else
 		string peeringdb_id = "";
 		string asset = "";
 
-		MySqlCommand peeringdb_cmd = new MySqlCommand("select peeringdb_network.id, peeringdb_network.name, peeringdb_network.irr_as_set from peeringdb_network where asn = @asn;", peeringdb_conn);
-		peeringdb_cmd.Prepare();
-		peeringdb_cmd.Parameters.AddWithValue("@asn", asnQuery);
-		MySqlDataReader peeringdb_rdr = peeringdb_cmd.ExecuteReader();
+		MySqlCommand luje_cmd = new MySqlCommand("select peeringdb_network.id, peeringdb_network.name, peeringdb_network.irr_as_set from peeringdb.peeringdb_network where asn = @asn;", luje_conn);
+		luje_cmd.Prepare();
+		luje_cmd.Parameters.AddWithValue("@asn", asnQuery);
+		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 
-		if (peeringdb_rdr.Read())
+		if (luje_rdr.Read())
 		{
 			asn = "AS" + asnQuery;
-			networkName = peeringdb_rdr["name"].ToString();
-			peeringdb_id = peeringdb_rdr["id"].ToString();
-			if (peeringdb_rdr["irr_as_set"].ToString() != "")
+			networkName = luje_rdr["name"].ToString();
+			peeringdb_id = luje_rdr["id"].ToString();
+			if (luje_rdr["irr_as_set"].ToString() != "")
 			{
-				asset = peeringdb_rdr["irr_as_set"].ToString();
+				asset = luje_rdr["irr_as_set"].ToString();
 				String[] spearator = { "::" };
 				String[] assetlist = asset.Split(spearator, StringSplitOptions.RemoveEmptyEntries);
 				if (assetlist.Count() == 1)
@@ -70,13 +68,12 @@ else
 			{
 				asset = "AS" + asnQuery;
 			}
-			peeringdb_rdr.Close();
+			luje_rdr.Close();
 		}
 		else
 		{
-			peeringdb_rdr.Close();
+			luje_rdr.Close();
 			Response.Redirect("/portal/admin");
-			peeringdb_conn.Close();
 			luje_conn.Close();
 			return;
 		}
@@ -90,15 +87,14 @@ else
 		if (addrid == "" && addr == "")
 		{
 			Response.Redirect("/portal/manual?asn=" + asnQuery);
-			peeringdb_conn.Close();
 			luje_conn.Close();
 			return;
 		}
 
-		MySqlCommand luje_cmd = new MySqlCommand("select peering_id from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = 0;", luje_conn);
+		luje_cmd = new MySqlCommand("select peering_id from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = 0;", luje_conn);
 		luje_cmd.Prepare();
 		luje_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
-		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+		luje_rdr = luje_cmd.ExecuteReader();
 
 		string peering_id = "";
 
@@ -183,7 +179,6 @@ else
 		}
 
 		Response.Redirect("/portal/manual?asn=" + asnQuery);
-		peeringdb_conn.Close();
 		luje_conn.Close();
 	}
 	catch (HttpRequestException e)

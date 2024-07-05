@@ -30,8 +30,6 @@ else
 	{
 		Profile profile = HttpContext.Session.Get<Profile>("profile");
 
-		MySqlConnection peeringdb_conn = new MySqlConnection(Configuration.PeeringDBPath);
-		peeringdb_conn.Open();
 		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
 		luje_conn.Open();
 
@@ -57,7 +55,6 @@ else
 				<input type="submit" value="select"/>
 			</form>
 		</div>
-		peeringdb_conn.Close();
 		luje_conn.Close();
 	}
 	catch (HttpRequestException e)

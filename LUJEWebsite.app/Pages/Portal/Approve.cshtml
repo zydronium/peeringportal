@@ -31,8 +31,6 @@ else
 		string id = Request.Query["id"];
 		string approve = Request.Query["approve"];
 
-		MySqlConnection peeringdb_conn = new MySqlConnection(Configuration.PeeringDBPath);
-		peeringdb_conn.Open();
 		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
 		luje_conn.Open();
 
@@ -85,7 +83,6 @@ else
 			}
 		}
 
-		peeringdb_conn.Close();
 		luje_conn.Close();
 		Response.Redirect("/portal/approvals");
 	}
