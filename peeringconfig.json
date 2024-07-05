@@ -1,0 +1,109 @@
+{
+  "Passwords": {
+    "AS15169": "password for google"
+  },
+  "LanMapping": {
+    "64": {
+      "Name": "nlix",
+      "Routers": [
+        "nikhef1"
+      ],
+      "GracefulShutdown": false,
+      "AdminDownState": false,
+      "BlockImportExport": false,
+      "BgpLocalPref": null
+    },
+    "1308": {
+      "Name": "lsix",
+      "Routers": [
+        "nikhef1"
+      ],
+      "GracefulShutdown": false,
+      "AdminDownState": false,
+      "BlockImportExport": false,
+      "BgpLocalPref": null
+    },
+    "1842": {
+      "Name": "speedix",
+      "Routers": [
+        "nikhef1"
+      ],
+      "GracefulShutdown": false,
+      "AdminDownState": false,
+      "BlockImportExport": false,
+      "BgpLocalPref": null
+    },
+    "2601": {
+      "Name": "locix",
+      "Routers": [
+        "nikhef1"
+      ],
+      "GracefulShutdown": false,
+      "AdminDownState": false,
+      "BlockImportExport": false,
+      "BgpLocalPref": null
+    },
+    "3512": {
+      "Name": "frysix",
+      "Routers": [
+        "nikhef1"
+      ],
+      "GracefulShutdown": false,
+      "AdminDownState": false,
+      "BlockImportExport": false,
+      "BgpLocalPref": null
+    },
+    "3756": {
+      "Name": "fogixp",
+      "Routers": [
+        "nikhef1"
+      ],
+      "GracefulShutdown": false,
+      "AdminDownState": false,
+      "BlockImportExport": false,
+      "BgpLocalPref": null
+    }
+  },
+  "RouterMapping": {
+    "eunetworks1": {
+      "Fqdn": "eunetworks1.routers.luje.net",
+      "Hostname": "eunetworks1.lujenet.nl",
+      "Ipv4": "185.36.229.255",
+      "Ipv6": "2a07:cd40::255",
+      "Vendor": "bird2",
+      "GracefulShutdown": false,
+      "MaintenanceMode": false,
+      "ExtraPrefix": [
+        {
+          "Subnet": "94.142.240.0/24",
+          "Name": "coloclue_eun",
+          "Afi": 4,
+          "GracefulShutdown": false,
+          "AdminDownState": false,
+          "BlockImportExport": false,
+          "BgpLocalPref": null
+        },
+        {
+          "Subnet": "2a02:898:0:20::/64",
+          "Name": "coloclue_eun",
+          "Afi": 6,
+          "GracefulShutdown": false,
+          "AdminDownState": false,
+          "BlockImportExport": false,
+          "BgpLocalPref": null
+        }
+      ]
+    },
+    "nikhef1": {
+      "Fqdn": "nikhef1.routers.luje.net",
+      "Hostname": "nikhef1.lujenet.nl",
+      "Ipv4": "185.36.229.254",
+      "Ipv6": "2a07:cd40::254",
+      "Vendor": "bird2",
+      "GracefulShutdown": false,
+      "MaintenanceMode": false,
+      "ExtraPrefix": []
+    }
+  },
+  "Rpki": true
+}
