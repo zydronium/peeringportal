@@ -1,20 +1,15 @@
 services:
-#  tunnel:
-#    image: cloudflare/cloudflared:latest
-#    restart: unless-stopped
-#    command: tunnel --no-autoupdate run
-#    environment:
-#      TUNNEL_TOKEN: eyJhIjoiY2M0NzUxM2EzNjdjMzE4Yjg3MGE2MzIwNDk1NzdkYzUiLCJ0IjoiMzMxNmUyZTctNGY2YS00ZmQ4LWI5ODAtYzI2MGEwYTRiZTdlIiwicyI6Ik4yWmlOV1ZoTjJNdE5XWXpZUzAwT1dKa0xXRmtZall0TldGaU5EVTJNR1F3TW1aayJ9
   db:
-    image: mariadb:lts
+    image: postgres:16-alpine
     restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: <snip>
-      MYSQL_DATABASE: luje
-      MYSQL_USER: luje
-      MYSQL_PASSWORD: <snip>
     volumes:
-      - ./db-data:/var/lib/mysql
+      - ./db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: luje
+      POSTGRES_DB: luje
+      POSTGRES_PASSWORD: <snip>
+    ports:
+      - "15432:5432"
   sync:
     image: git.luje.net/docker/website/luje:sync
     restart: unless-stopped
@@ -26,6 +21,8 @@ services:
   web:
     image: git.luje.net/docker/website/luje:web
     restart: unless-stopped
+    volumes:
+      - ./keys:/keys
     environment:
       DATABASE_SERVER: db
       DATABASE_USER: luje
@@ -49,12 +46,12 @@ services:
       DATABASE_USER: luje
       DATABASE_PASSWORD: <snip>
       DATABASE_NAME: luje
-      MAIL_SERVER: mail-server
-      MAIL_PORT: 25
+      MAIL_SERVER: <snip>
+      MAIL_PORT: <snip>
       MAIL_USER: <snip>
       MAIL_PASSWORD: <snip>
-      MAIL_FROM: hostmaster@luje.net
-      MAIL_TLS: <snip>
+      MAIL_FROM: <snip>
+      MAIL_TLS: False
     depends_on:
       - db
   peering:

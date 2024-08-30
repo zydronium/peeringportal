@@ -1,21 +1,22 @@
 ﻿@page
-@using MySqlConnector;
 @using System.Collections;
 @using LUJEWebsite.app.Utils;
+@using Npgsql;
+@using NpgsqlTypes;
 @{
-	ViewData["Title"] = "Home";
-	var ixList = new ArrayList();
-	var facList = new ArrayList();
+    ViewData["Title"] = "Home";
+    var ixList = new ArrayList();
+    var facList = new ArrayList();
 
-	try
-	{
-		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+    try
+    {
+		NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
 		luje_conn.Open();
 
-		MySqlCommand luje_cmd = new MySqlCommand("select peeringdb_ix.name, peeringdb_ix.name_long from peeringdb.peeringdb_network_ixlan inner join peeringdb.peeringdb_ixlan on peeringdb_network_ixlan.ixlan_id = peeringdb_ixlan.id inner join peeringdb.peeringdb_ix on peeringdb_ixlan.ix_id = peeringdb_ix.id where peeringdb_network_ixlan.asn = @portalowner;", luje_conn);
+		NpgsqlCommand luje_cmd = new NpgsqlCommand("select peeringdb_ix.name, peeringdb_ix.name_long from peeringdb_network_ixlan inner join peeringdb_ixlan on peeringdb_network_ixlan.ixlan_id = peeringdb_ixlan.id inner join peeringdb_ix on peeringdb_ixlan.ix_id = peeringdb_ix.id where peeringdb_network_ixlan.asn = @portalowner;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@portalowner", NpgsqlDbType.Integer, Convert.ToInt32(Configuration.PortalOwnerAsn));
 		luje_cmd.Prepare();
-		luje_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
-		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 		while (luje_rdr.Read())
 		{
 			var ix = new { name = luje_rdr["name"].ToString(), name_long = luje_rdr["name_long"].ToString() };
@@ -23,9 +24,9 @@
 		}
 		luje_rdr.Close();
 
-		luje_cmd = new MySqlCommand("select peeringdb_facility.name from peeringdb.peeringdb_network_facility inner join peeringdb.peeringdb_facility on peeringdb_network_facility.fac_id = peeringdb_facility.id where peeringdb_network_facility.local_asn = @portalowner;", luje_conn);
+		luje_cmd = new NpgsqlCommand("select peeringdb_facility.name from peeringdb_network_facility inner join peeringdb_facility on peeringdb_network_facility.fac_id = peeringdb_facility.id where peeringdb_network_facility.local_asn = @portalowner;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@portalowner", NpgsqlDbType.Integer, Convert.ToInt32(Configuration.PortalOwnerAsn));
 		luje_cmd.Prepare();
-		luje_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
 		luje_rdr = luje_cmd.ExecuteReader();
 		while (luje_rdr.Read())
 		{

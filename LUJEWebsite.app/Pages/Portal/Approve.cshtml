@@ -3,7 +3,8 @@
 @using LUJEWebsite.app.Extentions;
 @using LUJEWebsite.app.Model;
 @using LUJEWebsite.app.Utils;
-@using MySqlConnector;
+@using Npgsql;
+@using NpgsqlTypes;
 @{
 	HttpClient client = new HttpClient();
 	ViewData["Title"] = "Peering Portal";
@@ -31,13 +32,13 @@ else
 		string id = Request.Query["id"];
 		string approve = Request.Query["approve"];
 
-		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
 		luje_conn.Open();
 
-		MySqlCommand luje_cmd = new MySqlCommand("select peering.peering_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = 0 where peering_ips_active = 0 and peering_ips_rejected = 0 and peering_ips_deleted = 0 and peering_ips.peering_ips_id = @id;", luje_conn);
+		NpgsqlCommand luje_cmd = new NpgsqlCommand("select peering.peering_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false where peering_ips_active = false and peering_ips_rejected = false and peering_ips_deleted = false and peering_ips.peering_ips_id = @id;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@id", NpgsqlDbType.Integer, Convert.ToInt32(id));
 		luje_cmd.Prepare();
-		luje_cmd.Parameters.AddWithValue("@id", id);
-		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 
 		if(luje_rdr.Read())
 		{
@@ -45,35 +46,35 @@ else
 			if (approve == "y")
 			{
 				luje_rdr.Close();
-				luje_cmd = new MySqlCommand("update peering_ips set peering_ips_active = '1', peering_ips_modified = NOW() where peering_ips_id = @id and peering_ips_deleted = '0';", luje_conn);
+				luje_cmd = new NpgsqlCommand("update peering_ips set peering_ips_active = true, peering_ips_modified = NOW() where peering_ips_id = @id and peering_ips_deleted = false;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@id", Convert.ToInt32(id));
 				luje_cmd.Prepare();
-				luje_cmd.Parameters.AddWithValue("@id", id);
 				luje_cmd.ExecuteNonQuery();
 
-				luje_cmd = new MySqlCommand("update peering set peering_active = '1', peering_modified = NOW() where peering_id = @id and peering_deleted = '0';", luje_conn);
+				luje_cmd = new NpgsqlCommand("update peering set peering_active = true, peering_modified = NOW() where peering_id = @id and peering_deleted = false;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@id", Convert.ToInt32(peeringId));
 				luje_cmd.Prepare();
-				luje_cmd.Parameters.AddWithValue("@id", peeringId);
 				luje_cmd.ExecuteNonQuery();
 			}
 			else
 			{
 				luje_rdr.Close();
-				luje_cmd = new MySqlCommand("update peering_ips set peering_ips_rejected = '1', peering_ips_modified = NOW() where peering_ips_id = @id and peering_ips_deleted = '0';", luje_conn);
+				luje_cmd = new NpgsqlCommand("update peering_ips set peering_ips_rejected = true, peering_ips_modified = NOW() where peering_ips_id = @id and peering_ips_deleted = false;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@id", Convert.ToInt32(id));
 				luje_cmd.Prepare();
-				luje_cmd.Parameters.AddWithValue("@id", id);
 				luje_cmd.ExecuteNonQuery();
 
-				luje_cmd = new MySqlCommand("select peering.peering_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = 0 where peering_ips_deleted = 0 and peering_ips_rejected = 0 and peering.peering_id = @id;", luje_conn);
+				luje_cmd = new NpgsqlCommand("select peering.peering_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false where peering_ips_deleted = false and peering_ips_rejected = false and peering.peering_id = @id;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@id", Convert.ToInt32(peeringId));
 				luje_cmd.Prepare();
-				luje_cmd.Parameters.AddWithValue("@id", peeringId);
 				luje_rdr = luje_cmd.ExecuteReader();
 
 				if (!luje_rdr.Read())
 				{
 					luje_rdr.Close();
-					luje_cmd = new MySqlCommand("update peering set peering_deleted = '1', peering_modified = NOW() where peering_id = @id and peering_deleted = '0';", luje_conn);
+					luje_cmd = new NpgsqlCommand("update peering set peering_deleted = true, peering_modified = NOW() where peering_id = @id and peering_deleted = false;", luje_conn);
+					luje_cmd.Parameters.AddWithValue("@id", Convert.ToInt32(peeringId));
 					luje_cmd.Prepare();
-					luje_cmd.Parameters.AddWithValue("@id", peeringId);
 					luje_cmd.ExecuteNonQuery();
 				}
 				else

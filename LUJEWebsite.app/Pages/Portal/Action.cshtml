@@ -3,7 +3,8 @@
 @using LUJEWebsite.app.Extentions;
 @using LUJEWebsite.app.Model;
 @using LUJEWebsite.app.Utils;
-@using MySqlConnector;
+@using Npgsql;
+@using NpgsqlTypes;
 @using System.Collections;
 @{
 	HttpClient client = new HttpClient();
@@ -31,7 +32,7 @@ else
 	{
 		Profile profile = HttpContext.Session.Get<Profile>("profile");
 
-		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
 		luje_conn.Open();
 
 		string asnQuery = Request.Query["asn"];
@@ -42,10 +43,10 @@ else
 		string addrid = "";
 		string addrv = "";
 
-		MySqlCommand luje_cmd = new MySqlCommand("select peeringdb_network.id, peeringdb_network.name from peeringdb.peeringdb_network where asn = @asn;", luje_conn);
+		NpgsqlCommand luje_cmd = new NpgsqlCommand("select peeringdb_network.id, peeringdb_network.name from peeringdb_network where asn = @asn;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@asn", NpgsqlDbType.Integer, asnQuery);
 		luje_cmd.Prepare();
-		luje_cmd.Parameters.AddWithValue("@asn", asnQuery);
-		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 
 		if (luje_rdr.Read())
 		{
@@ -81,10 +82,10 @@ else
 			return;
 		}
 
-		luje_cmd = new MySqlCommand("select peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6 from peeringdb.peeringdb_network_ixlan where asn = @portalowner and ixlan_id = @lanid;", luje_conn);
+		luje_cmd = new NpgsqlCommand("select peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6 from peeringdb_network_ixlan where asn = @portalowner and ixlan_id = @lanid;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@portalowner", NpgsqlDbType.Integer, Convert.ToInt32(Configuration.PortalOwnerAsn));
+		luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(lanid));
 		luje_cmd.Prepare();
-		luje_cmd.Parameters.AddWithValue("@portalowner", Configuration.PortalOwnerAsn);
-		luje_cmd.Parameters.AddWithValue("@lanid", lanid);
 		luje_rdr = luje_cmd.ExecuteReader();
 		if (luje_rdr.Read())
 		{
@@ -111,12 +112,11 @@ else
 			return;
 		}
 
-		luje_cmd = new MySqlCommand("select peeringdb_network_ixlan.id, peeringdb_ix.name, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, peeringdb_network.irr_as_set from peeringdb.peeringdb_network_ixlan inner join peeringdb.peeringdb_network on peeringdb_network.id = peeringdb_network_ixlan.net_id inner join peeringdb.peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id inner join peeringdb.peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id where peeringdb_network_ixlan.asn = @asn and peeringdb_network_ixlan.id = @id and peeringdb_network_ixlan.ixlan_id = @lanid;", luje_conn);
+		luje_cmd = new NpgsqlCommand("select peeringdb_network_ixlan.id, peeringdb_ix.name, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, peeringdb_network.irr_as_set from peeringdb_network_ixlan inner join peeringdb_network on peeringdb_network.id = peeringdb_network_ixlan.net_id inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id where peeringdb_network_ixlan.asn = @asn and peeringdb_network_ixlan.id = @id and peeringdb_network_ixlan.ixlan_id = @lanid;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@asn", NpgsqlDbType.Integer, Convert.ToInt32(asnQuery));
+		luje_cmd.Parameters.AddWithValue("@id", NpgsqlDbType.Integer, Convert.ToInt32(addrid));
+		luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(lanid));
 		luje_cmd.Prepare();
-
-		luje_cmd.Parameters.AddWithValue("@asn", asnQuery);
-		luje_cmd.Parameters.AddWithValue("@id", addrid);
-		luje_cmd.Parameters.AddWithValue("@lanid", lanid);
 		luje_rdr = luje_cmd.ExecuteReader();
 		string address = "";
 		string netid = "";
@@ -175,9 +175,9 @@ else
 			return;
 		}
 
-		luje_cmd = new MySqlCommand("select peering_id from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = 0;", luje_conn);
+		luje_cmd = new NpgsqlCommand("select peering_id from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = false;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
 		luje_cmd.Prepare();
-		luje_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
 		luje_rdr = luje_cmd.ExecuteReader();
 
 		string peering_id = "";
@@ -190,17 +190,17 @@ else
 		else
 		{
 			luje_rdr.Close();
-			luje_cmd = new MySqlCommand("insert into peering (peering_peeringdb_id, peering_name, peering_as_set, peering_asn, peering_active, peering_deployed, peering_created, peering_modified, peering_deleted) values(@peeringdb_id, @name, @asset, @asn, 1, 0, NOW(), NOW(), 0);", luje_conn);
+			luje_cmd = new NpgsqlCommand("insert into peering (peering_peeringdb_id, peering_name, peering_as_set, peering_asn, peering_active, peering_deployed, peering_created, peering_modified, peering_deleted) values(@peeringdb_id, @name, @asset, @asn, true, false, NOW(), NOW(), false);", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
+			luje_cmd.Parameters.AddWithValue("@name", NpgsqlDbType.Varchar, networkName);
+			luje_cmd.Parameters.AddWithValue("@asset", NpgsqlDbType.Varchar, asset);
+			luje_cmd.Parameters.AddWithValue("@asn", NpgsqlDbType.Integer, Convert.ToInt32(asnQuery));
 			luje_cmd.Prepare();
-			luje_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
-			luje_cmd.Parameters.AddWithValue("@name", networkName);
-			luje_cmd.Parameters.AddWithValue("@asset", asset);
-			luje_cmd.Parameters.AddWithValue("@asn", asnQuery);
 			luje_cmd.ExecuteNonQuery();
 
-			luje_cmd = new MySqlCommand("select peering_id from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = 0;", luje_conn);
+			luje_cmd = new NpgsqlCommand("select peering_id from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = false;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
 			luje_cmd.Prepare();
-			luje_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
 			luje_rdr = luje_cmd.ExecuteReader();
 			if (luje_rdr.Read())
 			{
@@ -209,34 +209,34 @@ else
 			luje_rdr.Close();
 		}
 
-		luje_cmd = new MySqlCommand("select peering_ips_active, peering_ips_deployed, peering_ips_id, peering_id from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = 0 where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_type = @type and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = 0;", luje_conn);
+		luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_deployed, peering_ips_id, peering_id from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_type = @type and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
+		luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(addrid));
+		luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(lanid));
+		luje_cmd.Parameters.AddWithValue("@type", NpgsqlDbType.Integer, Convert.ToInt32(addrv));
 		luje_cmd.Prepare();
-		luje_cmd.Parameters.AddWithValue("@peeringdb_id", peeringdb_id);
-		luje_cmd.Parameters.AddWithValue("@addrid", addrid);
-		luje_cmd.Parameters.AddWithValue("@lanid", lanid);
-		luje_cmd.Parameters.AddWithValue("@type", addrv);
 		luje_rdr = luje_cmd.ExecuteReader();
 
 		if (luje_rdr.Read())
 		{
 			string peering_ips_id = luje_rdr["peering_ips_id"].ToString();
 			luje_rdr.Close();
-			luje_cmd = new MySqlCommand("update peering_ips set peering_ips_deleted = '1', peering_ips_modified = NOW() where peering_ips_id = @peering_ips_id and peering_ips_deleted = '0';", luje_conn);
+			luje_cmd = new NpgsqlCommand("update peering_ips set peering_ips_deleted = true, peering_ips_modified = NOW() where peering_ips_id = @peering_ips_id and peering_ips_deleted = true;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@peering_ips_id", NpgsqlDbType.Integer, Convert.ToInt32(peering_ips_id));
 			luje_cmd.Prepare();
-			luje_cmd.Parameters.AddWithValue("@peering_ips_id", peering_ips_id);
 			luje_cmd.ExecuteNonQuery();
 
-			luje_cmd = new MySqlCommand("select peering.peering_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = 0 where peering_ips_deleted = 0 and peering.peering_id = @peering_id;", luje_conn);
+			luje_cmd = new NpgsqlCommand("select peering.peering_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false where peering_ips_deleted = 0 and peering.peering_id = @peering_id;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@peering_id", NpgsqlDbType.Integer, Convert.ToInt32(peering_id));
 			luje_cmd.Prepare();
-			luje_cmd.Parameters.AddWithValue("@peering_id", peering_id);
 			luje_rdr = luje_cmd.ExecuteReader();
 
 			if (!luje_rdr.Read())
 			{
 				luje_rdr.Close();
-				luje_cmd = new MySqlCommand("update peering set peering_deleted = '1', peering_modified = NOW() where peering_id = @peering_id and peering_deleted = '0';", luje_conn);
+				luje_cmd = new NpgsqlCommand("update peering set peering_deleted = true, peering_modified = NOW() where peering_id = @peering_id and peering_deleted = false;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@peering_id", NpgsqlDbType.Integer, Convert.ToInt32(peering_id));
 				luje_cmd.Prepare();
-				luje_cmd.Parameters.AddWithValue("@peering_id", peering_id);
 				luje_cmd.ExecuteNonQuery();
 			}
 			else
@@ -247,13 +247,13 @@ else
 		else
 		{
 			luje_rdr.Close();
-			luje_cmd = new MySqlCommand("insert into peering_ips (peering_ips_peering_id, peering_ips_peeringdb_lanid, peering_ips_peeringdb_addrid, peering_ips_type, peering_ips_addr, peering_ips_active, peering_ips_rejected, peering_ips_deployed, peering_ips_notified, peering_ips_notified_approval, peering_ips_notified_skip, peering_ips_created, peering_ips_modified, peering_ips_deleted) values(@peering_id, @lanid, @addrid, @type, @addr, 1, 0, 0, 1, 1, 1, NOW(), NOW(), 0);", luje_conn);
+			luje_cmd = new NpgsqlCommand("insert into peering_ips (peering_ips_peering_id, peering_ips_peeringdb_lanid, peering_ips_peeringdb_addrid, peering_ips_type, peering_ips_addr, peering_ips_active, peering_ips_rejected, peering_ips_deployed, peering_ips_notified, peering_ips_notified_approval, peering_ips_notified_skip, peering_ips_created, peering_ips_modified, peering_ips_deleted) values(@peering_id, @lanid, @addrid, @type, @addr, true, false, false, true, true, true, NOW(), NOW(), false);", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@peering_id", NpgsqlDbType.Integer, Convert.ToInt32(peering_id));
+			luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(lanid));
+			luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(addrid));
+			luje_cmd.Parameters.AddWithValue("@type", NpgsqlDbType.Integer, Convert.ToInt32(addrv));
+			luje_cmd.Parameters.AddWithValue("@addr", NpgsqlDbType.Varchar, address);
 			luje_cmd.Prepare();
-			luje_cmd.Parameters.AddWithValue("@peering_id", peering_id);
-			luje_cmd.Parameters.AddWithValue("@lanid", lanid);
-			luje_cmd.Parameters.AddWithValue("@addrid", addrid);
-			luje_cmd.Parameters.AddWithValue("@type", addrv);
-			luje_cmd.Parameters.AddWithValue("@addr", address);
 			luje_cmd.ExecuteNonQuery();
 		}
 

@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+﻿using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -95,10 +95,10 @@ namespace LUJEWebsite.PeeringGenerator
 			.Element("attributes");
 
 
-			MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+			NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
 			luje_conn.Open();
-			MySqlCommand luje_cmd = new MySqlCommand("select peering.peering_peeringdb_id, name, asn, irr_as_set from peering INNER JOIN peeringdb.peeringdb_network ON peeringdb_network.id = peering_peeringdb_id where peering_active = 1 and peering_deleted = 0 order by cast(peering_asn as unsigned) asc;", luje_conn);
-			MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+			NpgsqlCommand luje_cmd = new NpgsqlCommand("select peering.peering_peeringdb_id, name, asn, irr_as_set from peering INNER JOIN peeringdb_network ON peeringdb_network.id = peering_peeringdb_id where peering_active = true and peering_deleted = false order by cast(peering_asn as integer) asc;", luje_conn);
+			NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 
 			var peeringList = new List<PeeringEntry>();
 

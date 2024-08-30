@@ -3,7 +3,7 @@
 @using LUJEWebsite.app.Extentions;
 @using LUJEWebsite.app.Model;
 @using LUJEWebsite.app.Utils;
-@using MySqlConnector;
+@using Npgsql;
 @{
 	HttpClient client = new HttpClient();
 	ViewData["Title"] = "Peering Portal";
@@ -30,18 +30,18 @@ else
 	{
 		Profile profile = HttpContext.Session.Get<Profile>("profile");
 
-		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
 		luje_conn.Open();
 
-		MySqlCommand luje_cmd = new MySqlCommand(@"select peering_ips.peering_ips_id, peering_ips.peering_ips_peeringdb_lanid, peering_ips.peering_ips_peeringdb_addrid, peering_ips.peering_ips_type, peering.peering_peeringdb_id, peeringdb_network_ixlan.id, peeringdb_ix.name as ix_name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, peeringdb_network.asn, peeringdb_network.name
+		NpgsqlCommand luje_cmd = new NpgsqlCommand(@"select peering_ips.peering_ips_id, peering_ips.peering_ips_peeringdb_lanid, peering_ips.peering_ips_peeringdb_addrid, peering_ips.peering_ips_type, peering.peering_peeringdb_id, peeringdb_network_ixlan.id, peeringdb_ix.name as ix_name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, peeringdb_network.asn, peeringdb_network.name
 from peering_ips
-inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = 0
-inner join peeringdb.peeringdb_network on peeringdb_network.id = peering_peeringdb_id
-inner join peeringdb.peeringdb_network_ixlan on peeringdb_network.id = peeringdb_network_ixlan.net_id
-inner join peeringdb.peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id 
-inner join peeringdb.peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id and peeringdb_network_ixlan.id = peering_ips_peeringdb_addrid and peeringdb_network_ixlan.ixlan_id = peering_ips_peeringdb_lanid
-where peering_ips_active = 0 and peering_ips_rejected = 0 and peering_ips_deleted = 0 order by peering.peering_asn asc;", luje_conn);
-		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false
+inner join peeringdb_network on peeringdb_network.id = peering_peeringdb_id
+inner join peeringdb_network_ixlan on peeringdb_network.id = peeringdb_network_ixlan.net_id
+inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id 
+inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id and peeringdb_network_ixlan.id = peering_ips_peeringdb_addrid and peeringdb_network_ixlan.ixlan_id = peering_ips_peeringdb_lanid
+where peering_ips_active = false and peering_ips_rejected = false and peering_ips_deleted = false order by peering.peering_asn asc;", luje_conn);
+		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 
 		<div class="columns nine">
 			<h2>Peering Admin</h2>

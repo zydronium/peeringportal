@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+﻿using Npgsql;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -8,6 +8,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using NpgsqlTypes;
 
 namespace LUJEWebsite.PeeringGenerator
 {
@@ -19,9 +20,9 @@ namespace LUJEWebsite.PeeringGenerator
 		private readonly string as_set;
         private readonly string irr_order;
         private readonly string irr_source_host;
-        private readonly MySqlConnection conn;
+        private readonly NpgsqlConnection conn;
 
-        public BgpqGenerator(MySqlConnection Conn, string asnumber, string peering_peeringdb_id, string asn, string as_set, string irr_order, string irr_source_host)
+        public BgpqGenerator(NpgsqlConnection Conn, string asnumber, string peering_peeringdb_id, string asn, string as_set, string irr_order, string irr_source_host)
         {
             this.asn = asn;
 			this.asnumber = asnumber;
@@ -105,20 +106,20 @@ namespace LUJEWebsite.PeeringGenerator
 			var existingPrefixes = new List<string>();
 			var prefixIdMap = new Dictionary<string, int>();
 
-			using (var command = new MySqlCommand("SELECT peering_acl_id, peering_acl_prefix FROM peering_acl WHERE peering_acl_peeringdb_id = @PeeringdbId AND peering_acl_asn = @Asn AND peering_acl_afi = @Afi AND peering_acl_deleted = 0", conn))
+			using (var command = new NpgsqlCommand("SELECT peering_acl_id, peering_acl_prefix FROM peering_acl WHERE peering_acl_peeringdb_id = @PeeringdbId AND peering_acl_asn = @Asn AND peering_acl_afi = @Afi AND peering_acl_deleted = false", conn))
 			{
-				command.Parameters.AddWithValue("@PeeringdbId", peering_peeringdb_id);
-				command.Parameters.AddWithValue("@Asn", asnumber);
-				command.Parameters.Add("@Afi", MySqlDbType.Int32, v);
+				command.Parameters.AddWithValue("@PeeringdbId", NpgsqlDbType.Integer, peering_peeringdb_id);
+				command.Parameters.AddWithValue("@Asn", NpgsqlDbType.Integer, asnumber);
+				command.Parameters.Add("@Afi", NpgsqlDbType.Integer, v);
 
-				Console.WriteLine($"SELECT peering_acl_id, peering_acl_prefix FROM peering_acl WHERE peering_acl_peeringdb_id = {peering_peeringdb_id} AND peering_acl_asn = {asnumber} AND peering_acl_afi = {v} AND peering_acl_deleted = 0");
+				Console.WriteLine($"SELECT peering_acl_id, peering_acl_prefix FROM peering_acl WHERE peering_acl_peeringdb_id = {peering_peeringdb_id} AND peering_acl_asn = {asnumber} AND peering_acl_afi = {v} AND peering_acl_deleted = false");
 
 				using (var reader = command.ExecuteReader())
 				{
 					while (reader.Read())
 					{
-						var prefix = reader.GetString("peering_acl_prefix");
-						var id = reader.GetInt32("peering_acl_id");
+						var prefix = reader["peering_acl_prefix"].ToString();
+						var id = Convert.ToInt32(reader["peering_acl_id"]);
 						existingPrefixes.Add(prefix);
 						prefixIdMap[prefix] = id;
 					}
@@ -149,10 +150,10 @@ namespace LUJEWebsite.PeeringGenerator
 				// Soft delete prefixes no longer in the file
 				if (prefixesToDelete.Count > 0)
 				{
-					using (var deleteCommand = new MySqlCommand("UPDATE peering_acl SET peering_acl_deleted = 1, peering_acl_modified = NOW() WHERE peering_acl_id = @Id AND peering_acl_afi = @Afi AND peering_acl_deleted = 0", conn, transaction))
+					using (var deleteCommand = new NpgsqlCommand("UPDATE peering_acl SET peering_acl_deleted = 1, peering_acl_modified = NOW() WHERE peering_acl_id = @Id AND peering_acl_afi = @Afi AND peering_acl_deleted = false", conn, transaction))
 					{
-						deleteCommand.Parameters.Add("@Id", MySqlDbType.Int32);
-						deleteCommand.Parameters.Add("@Afi", MySqlDbType.Int32).Value = v;
+						deleteCommand.Parameters.Add("@Id", NpgsqlDbType.Integer);
+						deleteCommand.Parameters.Add("@Afi", NpgsqlDbType.Integer).Value = v;
 
 						foreach (var prefix in prefixesToDelete)
 						{
@@ -165,12 +166,12 @@ namespace LUJEWebsite.PeeringGenerator
 				// Add new prefixes from the file
 				if (prefixesToAdd.Count > 0)
 				{
-					using (var insertCommand = new MySqlCommand("INSERT INTO peering_acl (peering_acl_peeringdb_id, peering_acl_asn, peering_acl_afi, peering_acl_prefix, peering_acl_created, peering_acl_modified, peering_acl_deleted) VALUES (@PeeringdbId, @Asn, @Afi, @Prefix, NOW(), NOW(), 0)", conn, transaction))
+					using (var insertCommand = new NpgsqlCommand("INSERT INTO peering_acl (peering_acl_peeringdb_id, peering_acl_asn, peering_acl_afi, peering_acl_prefix, peering_acl_created, peering_acl_modified, peering_acl_deleted) VALUES (@PeeringdbId, @Asn, @Afi, @Prefix, NOW(), NOW(), false)", conn, transaction))
 					{
-						insertCommand.Parameters.Add("@PeeringdbId", MySqlDbType.Int32).Value = peering_peeringdb_id;
-						insertCommand.Parameters.Add("@Asn", MySqlDbType.VarChar).Value = asnumber;
-						insertCommand.Parameters.Add("@Prefix", MySqlDbType.VarChar);
-                        insertCommand.Parameters.Add("@Afi", MySqlDbType.Int32).Value = v;
+						insertCommand.Parameters.Add("@PeeringdbId", NpgsqlDbType.Integer).Value = Convert.ToInt32(peering_peeringdb_id);
+						insertCommand.Parameters.Add("@Asn", NpgsqlDbType.Varchar).Value = asnumber;
+						insertCommand.Parameters.Add("@Prefix", NpgsqlDbType.Varchar);
+                        insertCommand.Parameters.Add("@Afi", NpgsqlDbType.Integer).Value = v;
 
 						foreach (var prefix in prefixesToAdd)
 						{

@@ -3,7 +3,7 @@
 @using LUJEWebsite.app.Extentions;
 @using LUJEWebsite.app.Model;
 @using LUJEWebsite.app.Utils;
-@using MySqlConnector;
+@using Npgsql;
 @{
 	HttpClient client = new HttpClient();
 	ViewData["Title"] = "Peering Portal";
@@ -30,11 +30,11 @@ else
 	{
 		Profile profile = HttpContext.Session.Get<Profile>("profile");
 
-		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
 		luje_conn.Open();
 
-		MySqlCommand luje_cmd = new MySqlCommand("select count(peering_ips.peering_ips_id) as count from peering_ips where peering_ips_active = 0 and peering_ips_rejected = 0 and peering_ips_deleted = 0;", luje_conn);
-		MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+		NpgsqlCommand luje_cmd = new NpgsqlCommand("select count(peering_ips.peering_ips_id) as count from peering_ips where peering_ips_active = false and peering_ips_rejected = false and peering_ips_deleted = false;", luje_conn);
+		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 
 		string countApproval = "";
 		if (luje_rdr.Read())

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 
@@ -14,6 +15,9 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 builder.Services.AddAntiforgery();
+
+builder.Services.AddDataProtection()
+	.PersistKeysToFileSystem(new DirectoryInfo(@"/keys"));
 
 
 var app = builder.Build();

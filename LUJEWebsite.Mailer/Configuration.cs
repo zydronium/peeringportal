@@ -53,6 +53,13 @@ namespace LUJEWebsite.Mailer
             {
                 return Environment.GetEnvironmentVariable("MAIL_FROM");
             }
-        }
-    }
+		}
+		public static string MailTls
+		{
+			get
+			{
+				return Environment.GetEnvironmentVariable("MAIL_TLS");
+			}
+		}
+	}
 }

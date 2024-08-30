@@ -10,7 +10,7 @@
                 string user = Environment.GetEnvironmentVariable("DATABASE_USER");
                 string password = Environment.GetEnvironmentVariable("DATABASE_PASSWORD");
                 string name = Environment.GetEnvironmentVariable("DATABASE_NAME");
-                return String.Format("Server={0};Database={1};Uid={2};Pwd={3};", server, name, user, password);
+                return String.Format("Server={0};Database={1};Uid={2};Pwd={3};Include Error Detail=true", server, name, user, password);
             }
         }
 		public static string PortalHostname
