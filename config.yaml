@@ -1,11 +1,11 @@
 orm:
   backend: django_peeringdb
   database:
-    engine: mysql
-    host: peeringdb
-    name: peeringdb
+    engine: postgresql
+    host: db
+    name: luje
     password: <snip>
-    user: peeringdb
+    user: luje
   migrate: true
   secret_key: ''
 sync:
