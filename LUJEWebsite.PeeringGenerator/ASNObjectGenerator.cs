@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -74,6 +76,30 @@ namespace LUJEWebsite.PeeringGenerator
 								new XElement("attribute",
 									new XAttribute("name", "mp-export"),
 									new XAttribute("value", $"to AS8298 announce {Configuration.PortalExport}")
+								),
+								new XElement("attribute",
+									new XAttribute("name", "remarks"),
+									new XAttribute("value", "FREETRANSIT")
+								),
+								new XElement("attribute",
+									new XAttribute("name", "mp-import"),
+									new XAttribute("value", "from AS41051 accept ANY")
+								),
+								new XElement("attribute",
+									new XAttribute("name", "mp-export"),
+									new XAttribute("value", $"to AS41051 announce {Configuration.PortalExport}")
+								),
+								new XElement("attribute",
+									new XAttribute("name", "remarks"),
+									new XAttribute("value", "NetOne NL")
+								),
+								new XElement("attribute",
+									new XAttribute("name", "mp-import"),
+									new XAttribute("value", "from AS200132 accept ANY")
+								),
+								new XElement("attribute",
+									new XAttribute("name", "mp-export"),
+									new XAttribute("value", $"to AS200132 announce {Configuration.PortalExport}")
 								),
 								new XElement("attribute",
 									new XAttribute("name", "remarks"),
@@ -260,6 +286,14 @@ namespace LUJEWebsite.PeeringGenerator
 				),
 				new XElement("attribute",
 					new XAttribute("name", "remarks"),
+					new XAttribute("value", "212855:6:3   | received from FREETRANSIT")
+				),
+				new XElement("attribute",
+					new XAttribute("name", "remarks"),
+					new XAttribute("value", "212855:6:4   | received from NetOne NL")
+				),
+				new XElement("attribute",
+					new XAttribute("name", "remarks"),
 					new XAttribute("value", "-------------+-------------------------------------")
 				),
 				new XElement("attribute",
@@ -343,20 +377,24 @@ namespace LUJEWebsite.PeeringGenerator
 					new XAttribute("value", "RIPE")
 				)
 			);
-			using (HttpClient client = new HttpClient())
+			using (var handler = new HttpClientHandler())
 			{
-				HttpResponseMessage response;
-
-				try
+				handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+				handler.SslProtocols = SslProtocols.Tls12;
+				handler.ClientCertificates.Add(new X509Certificate2("ripeauth.pfx", Configuration.PfxPassword));
+				using (var client = new HttpClient(handler))
 				{
-					string ripeApiUrl = $"https://rest.db.ripe.net/ripe/aut-num/AS{Configuration.PortalOwnerAsn}?password={Configuration.PortalRipePassword}";
-					var content = new StringContent(xmlDocument.ToString(), Encoding.UTF8, "application/xml");
-					response = await client.PutAsync(ripeApiUrl, content);
-					response.EnsureSuccessStatusCode();
-				}
-				catch (HttpRequestException e)
-				{
-					Console.WriteLine($"Request failed: {e.Message}");
+					try
+					{
+						string ripeApiUrl = $"https://rest-cert.db.ripe.net/ripe/aut-num/AS{Configuration.PortalOwnerAsn}";
+						var content = new StringContent(xmlDocument.ToString(), Encoding.UTF8, "application/xml");
+						var response = await client.PutAsync(ripeApiUrl, content);
+						response.EnsureSuccessStatusCode();
+					}
+					catch (HttpRequestException e)
+					{
+						Console.WriteLine($"Request failed: {e.Message}");
+					}
 				}
 			}
 		}

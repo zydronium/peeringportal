@@ -9,7 +9,7 @@ namespace LUJEWebsite.PeeringGenerator.Models
 	internal class LanEntry
 	{
 		public string Name { get; set; }
-		public List<string> Routers { get; set; }
+		public List<LanRouterEntry> Routers { get; set; }
 		public bool GracefulShutdown { get; set; }
 		public bool AdminDownState { get; set; }
 		public bool BlockImportExport { get; set; }

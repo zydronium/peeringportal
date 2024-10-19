@@ -14,6 +14,7 @@
 	string accessToken = "";
 	string lanid = "";
 	string addrid = "";
+	string oaddrid = "";
 	string addrv = "";
 	Network selectedNetwork = null;
 	if (HttpContext.Session.Get<Boolean>("loggedin") != null && HttpContext.Session.Get<Boolean>("loggedin") == true)
@@ -36,6 +37,17 @@
 		{
 			Response.Redirect("/portal/network?asn=" + selectedNetwork.asn);
 			return;
+
+		}
+		oaddrid = HttpContext.Request.Query["oaddrid"];
+		if (oaddrid == "")
+
+		{
+
+			Response.Redirect("/portal/network?asn=" + selectedNetwork.asn);
+
+			return;
+
 		}
 		addrv = HttpContext.Request.Query["v"];
 		if (addrv != "4" && addrv != "6")
@@ -68,9 +80,10 @@
 			NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
 			luje_conn.Open();
 
-			NpgsqlCommand luje_cmd = new NpgsqlCommand("select peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6 from peeringdb_network_ixlan where asn = @portalowner and ixlan_id = @lanid;", luje_conn);
+			NpgsqlCommand luje_cmd = new NpgsqlCommand("select peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6 from peeringdb_network_ixlan where asn = @portalowner and ixlan_id = @lanid and id = @oaddrid;;", luje_conn);
 			luje_cmd.Parameters.AddWithValue("@portalowner", NpgsqlDbType.Integer, Convert.ToInt32(Configuration.PortalOwnerAsn));
 			luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(lanid));
+			luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(oaddrid));
 			luje_cmd.Prepare();
 			NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 			if (luje_rdr.Read())
@@ -195,9 +208,11 @@
 				luje_rdr.Close();
 			}
 
-			luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_type = @type and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
+
+			luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = @type and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
 			luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, selectedNetwork.id);
 			luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(addrid));
+			luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(oaddrid));
 			luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(lanid));
 			luje_cmd.Parameters.AddWithValue("@type", NpgsqlDbType.Integer, Convert.ToInt32(addrv));
 			luje_cmd.Prepare();
@@ -210,10 +225,11 @@
 			else
 			{
 				luje_rdr.Close();
-				luje_cmd = new NpgsqlCommand("insert into peering_ips (peering_ips_peering_id, peering_ips_peeringdb_lanid, peering_ips_peeringdb_addrid, peering_ips_type, peering_ips_addr, peering_ips_active, peering_ips_rejected, peering_ips_deployed, peering_ips_notified, peering_ips_notified_skip, peering_ips_notified_approval, peering_ips_notified_email, peering_ips_created, peering_ips_modified, peering_ips_deleted) values(@peering_id, @lanid, @addrid, @type, @addr, false, false, false, false, false, false, @email, NOW(), NOW(), false);", luje_conn);
+				luje_cmd = new NpgsqlCommand("insert into peering_ips (peering_ips_peering_id, peering_ips_peeringdb_lanid, peering_ips_peeringdb_addrid, peering_ips_peeringdb_oaddrid, peering_ips_type, peering_ips_addr, peering_ips_active, peering_ips_rejected, peering_ips_deployed, peering_ips_notified, peering_ips_notified_skip, peering_ips_notified_approval, peering_ips_notified_email, peering_ips_created, peering_ips_modified, peering_ips_deleted) values(@peering_id, @lanid, @addrid, @oaddrid, @type, @addr, false, false, false, false, false, false, @email, NOW(), NOW(), false);", luje_conn);
 				luje_cmd.Parameters.AddWithValue("@peering_id", NpgsqlDbType.Integer, Convert.ToInt32(peering_id));
 				luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(lanid));
 				luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(addrid));
+				luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(oaddrid));
 				luje_cmd.Parameters.AddWithValue("@type", NpgsqlDbType.Integer, Convert.ToInt32(addrv));
 				luje_cmd.Parameters.AddWithValue("@addr", NpgsqlDbType.Varchar, address);
 				luje_cmd.Parameters.AddWithValue("@email", NpgsqlDbType.Varchar, profile.email);

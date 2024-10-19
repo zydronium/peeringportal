@@ -9,6 +9,7 @@ namespace LUJEWebsite.PeeringGenerator.Models
 	internal class ExtraPrefixEntry
 	{
 		public string Subnet { get; set; }
+		public string IPAddress { get; set; }
 		public string Name { get; set; }
 		public int Afi { get; set; }
 		public bool GracefulShutdown { get; set; }

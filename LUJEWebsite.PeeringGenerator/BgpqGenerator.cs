@@ -14,7 +14,6 @@ namespace LUJEWebsite.PeeringGenerator
 {
     internal class BgpqGenerator
     {
-        private readonly string asn;
 		private readonly string asnumber;
         private readonly string peering_peeringdb_id;
 		private readonly string as_set;
@@ -22,9 +21,8 @@ namespace LUJEWebsite.PeeringGenerator
         private readonly string irr_source_host;
         private readonly NpgsqlConnection conn;
 
-        public BgpqGenerator(NpgsqlConnection Conn, string asnumber, string peering_peeringdb_id, string asn, string as_set, string irr_order, string irr_source_host)
+        public BgpqGenerator(NpgsqlConnection Conn, string asnumber, string peering_peeringdb_id, string as_set, string irr_order, string irr_source_host)
         {
-            this.asn = asn;
 			this.asnumber = asnumber;
 			this.peering_peeringdb_id = peering_peeringdb_id;
 			this.as_set = as_set;
@@ -35,7 +33,7 @@ namespace LUJEWebsite.PeeringGenerator
 
 		private void RunBgpq4(string filename, int v, string as_set, string vendor, string[] flags, string subterm)
         {
-            string stanza_name = $"AUTOFILTER_{asn}_IPv{v}{subterm}";
+            string stanza_name = $"AUTOFILTER_AS{asnumber}_IPv{v}{subterm}";
 
             var argumentsList = new List<string>
             {
@@ -241,7 +239,7 @@ namespace LUJEWebsite.PeeringGenerator
                     continue;
                 }
 
-                string filename = $"{Configuration.RoutefiltersLocation}/{asn}.prefixset.bird.ipv{v}";
+                string filename = $"{Configuration.RoutefiltersLocation}/AS{asnumber}.prefixset.bird.ipv{v}";
 
                 if (File.Exists(filename))
                 {

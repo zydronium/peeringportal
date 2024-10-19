@@ -54,58 +54,63 @@ namespace LUJEWebsite.PeeringGenerator
 			}
 			luje_rdr.Close();
 
+			Parallel.ForEach(peeringList, peer =>
+			{
+				Console.WriteLine($"working on BGPQ4 filter for asn {peer.asn}");
+				string asset = "";
+				if (peer.irr_as_set != "")
+				{
+					var assetBuilder = new StringBuilder();
+					asset = peer.irr_as_set;
+					String[] spearator = { " " };
+					String[] assetlist = asset.Split(spearator, StringSplitOptions.RemoveEmptyEntries);
+					foreach (string assetPart in assetlist)
+					{
+						String[] spearatorPart = { "::" };
+						String[] assetlistPart = assetPart.Split(spearatorPart, StringSplitOptions.RemoveEmptyEntries);
+						if (assetlistPart.Count() == 1)
+						{
+							assetBuilder.Append(assetlistPart[0]);
+							assetBuilder.Append(" ");
+						}
+						else
+						{
+							assetBuilder.Append(assetlistPart[1]);
+							assetBuilder.Append(" ");
+						}
+					}
+
+					asset = assetBuilder.ToString().Trim();
+				}
+				else
+				{
+					asset = $"AS{peer.asn}";
+				}
+
+				//BGP IRR filter generation
+
+				var bgpq = new BgpqGenerator(luje_conn, peer.asn, peer.peering_peeringdb_id, asset, "NTTCOM,INTERNAL,RADB,RIPE,ALTDB,BELL,LEVEL3,APNIC,JPIRR,ARIN,BBOI,TC,AFRINIC,RPKI,REGISTROBR", "rr.ntt.net");
+				bgpq.GenerateFilters();
+
+				Console.WriteLine($"finished working on BGPQ4 filter for asn {peer.asn}");
+			});
+
 			foreach (var peer in peeringList)
 			{
 				string asn = "AS" + peer.asn;
-                string name = peer.name;
-                string asset = "";
-                if (peer.irr_as_set != "")
-                {
-                    var assetBuilder = new StringBuilder();
-                    asset = peer.irr_as_set;
-                    String[] spearator = { " " };
-                    String[] assetlist = asset.Split(spearator, StringSplitOptions.RemoveEmptyEntries);
-                    foreach (string assetPart in assetlist)
-                    {
-                        String[] spearatorPart = { "::" };
-                        String[] assetlistPart = assetPart.Split(spearatorPart, StringSplitOptions.RemoveEmptyEntries);
-                        if (assetlistPart.Count() == 1)
-                        {
-                            assetBuilder.Append(assetlistPart[0]);
-                            assetBuilder.Append(" ");
-                        }
-                        else
-                        {
-                            assetBuilder.Append(assetlistPart[1]);
-                            assetBuilder.Append(" ");
-                        }
-                    }
-
-                    asset = assetBuilder.ToString().Trim();
-                }
-                else
-                {
-                    asset = asn;
-                }
-
-                Console.WriteLine($"working on asn {asn}");
-
-                //BGP IRR filter generation
-
-                var bgpq = new BgpqGenerator(luje_conn, peer.asn, peer.peering_peeringdb_id, asn, asset, "NTTCOM,INTERNAL,RADB,RIPE,ALTDB,BELL,LEVEL3,APNIC,JPIRR,ARIN,BBOI,TC,AFRINIC,RPKI,REGISTROBR", "rr.ntt.net");
-                bgpq.GenerateFilters();
-
+				Console.WriteLine($"working on BIRD config for asn {peer.asn}");
 				//ASN: asn
 				//description: name
 				//as-set: asset
 
-				luje_cmd = new NpgsqlCommand(@"select peering_ips.peering_ips_id, peering_ips.peering_ips_peeringdb_lanid, peering_ips.peering_ips_peeringdb_addrid, peering_ips.peering_ips_type, peering.peering_peeringdb_id, peeringdb_network_ixlan.id, peeringdb_ix.name as ix_name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, peeringdb_network.asn, peeringdb_network.name, peeringdb_network.info_prefixes4, peeringdb_network.info_prefixes6
+				luje_cmd = new NpgsqlCommand(@"select peering_ips.peering_ips_id, peering_ips.peering_ips_peeringdb_lanid, peering_ips.peering_ips_peeringdb_addrid, peering_ips.peering_ips_type, peering.peering_peeringdb_id, peeringdb_network_ixlan.id, peeringdb_ix.name as ix_name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, peeringdb_network.asn, peeringdb_network.name, peeringdb_network.info_prefixes4, peeringdb_network.info_prefixes6, owner_peeringdb_network_ixlan.ipaddr4 as owneripaddr4, owner_peeringdb_network_ixlan.ipaddr6 as owneripaddr6
 from peering_ips
 inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false
 inner join peeringdb_network ON peeringdb_network.id = peering_peeringdb_id
 INNER JOIN peeringdb_network_ixlan on peeringdb_network.id = peeringdb_network_ixlan.net_id and peeringdb_network_ixlan.id = peering_ips_peeringdb_addrid and peeringdb_network_ixlan.ixlan_id = peering_ips_peeringdb_lanid
 inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id
 inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id
+inner join peeringdb_network_ixlan as owner_peeringdb_network_ixlan on peeringdb_ixlan.id = owner_peeringdb_network_ixlan.ixlan_id and owner_peeringdb_network_ixlan.id = peering_ips_peeringdb_oaddrid
 where peering.peering_peeringdb_id = @peer and peering_ips_active = true and peering_ips_deleted = false
 ORDER BY peeringdb_network.asn ASC;", luje_conn);
 				luje_cmd.Parameters.AddWithValue("@peer", NpgsqlDbType.Integer, Convert.ToInt32(peer.peering_peeringdb_id));
@@ -121,93 +126,105 @@ ORDER BY peeringdb_network.asn ASC;", luje_conn);
                     if (luje_rdr["peering_ips_type"].ToString() == "4")
 					{
 						Console.WriteLine($"found peer {luje_rdr["ipaddr4"].ToString()} in IXP {lan.Name} with localpref {lan.BgpLocalPref}");
-						Console.WriteLine($"must deploy on {string.Join(",", lan.Routers)}");
 
 						foreach (var item in lan.Routers) {
-							var router = config.RouterMapping[item];
-							string filename = $"{Configuration.RoutefiltersLocation}/{router.Fqdn}.{router.Vendor}.ipv4.config";
-                            bool gracefullShutdown = false;
-                            if(router.GracefulShutdown || lan.GracefulShutdown)
-                            {
-                                gracefullShutdown = true;
-							}
-							bool adminDownState = false;
-							if (lan.AdminDownState)
+							foreach(var routerAddress in item.IPAddresses)
 							{
-								adminDownState = true;
-							}
-							bool blockImportExport = false;
-							if (lan.BlockImportExport)
-							{
-								blockImportExport = true;
-							}
-							if (!filterReady[$"{item}4"].Contains($"AS{luje_rdr["asn"].ToString()}"))
-                            {
-								GenerateFilter(filename, 4, $"AS{luje_rdr["asn"].ToString()}", gracefullShutdown, "peer", config.Rpki);
-                                filterReady[$"{item}4"].Add($"AS{luje_rdr["asn"].ToString()}");
-							}
+								if (luje_rdr["owneripaddr4"].ToString() == routerAddress)
+								{
+									Console.WriteLine($"must deploy on {item.Name}");
+									var router = config.RouterMapping[item.Name];
+									string filename = $"{Configuration.RoutefiltersLocation}/{router.Fqdn}.{router.Vendor}.ipv4.config";
+									bool gracefullShutdown = false;
+									if (router.GracefulShutdown || lan.GracefulShutdown)
+									{
+										gracefullShutdown = true;
+									}
+									bool adminDownState = false;
+									if (lan.AdminDownState)
+									{
+										adminDownState = true;
+									}
+									bool blockImportExport = false;
+									if (lan.BlockImportExport)
+									{
+										blockImportExport = true;
+									}
+									if (!filterReady[$"{item.Name}4"].Contains($"AS{luje_rdr["asn"].ToString()}"))
+									{
+										GenerateFilter(filename, 4, $"AS{luje_rdr["asn"].ToString()}", gracefullShutdown, "peer", config.Rpki);
+										filterReady[$"{item.Name}4"].Add($"AS{luje_rdr["asn"].ToString()}");
+									}
 
-							string neighboorName = $"peer_ipv4_AS{luje_rdr["asn"].ToString()}_{lan.Name}_{Utils.GetNeighborName(luje_rdr["ipaddr4"].ToString())}";
-							int? limit = null;
-							if (luje_rdr["info_prefixes4"] != null)
-							{
-								limit = Convert.ToInt32(luje_rdr["info_prefixes4"]);
-							}
+									string neighboorName = $"peer_ipv4_AS{luje_rdr["asn"].ToString()}_{lan.Name}_{Utils.GetNeighborName(luje_rdr["ipaddr4"].ToString())}";
+									int? limit = null;
+									if (luje_rdr["info_prefixes4"] != null)
+									{
+										limit = Convert.ToInt32(luje_rdr["info_prefixes4"]);
+									}
 
-							string? password = null;
-							if (config.Passwords.ContainsKey($"AS{luje_rdr["asn"].ToString()}"))
-							{
-								password = config.Passwords[$"AS{luje_rdr["asn"].ToString()}"];
-							}
+									string? password = null;
+									if (config.Passwords.ContainsKey($"AS{luje_rdr["asn"].ToString()}"))
+									{
+										password = config.Passwords[$"AS{luje_rdr["asn"].ToString()}"];
+									}
 
-							GenerateSession(filename, 4, neighboorName, luje_rdr["name"].ToString(), luje_rdr["ipaddr4"].ToString(), luje_rdr["asn"].ToString(), lan.BgpLocalPref, limit, blockImportExport, false, password, adminDownState, gracefullShutdown);
+									GenerateSession(filename, luje_rdr["owneripaddr4"].ToString(), 4, neighboorName, luje_rdr["name"].ToString(), luje_rdr["ipaddr4"].ToString(), luje_rdr["asn"].ToString(), lan.BgpLocalPref, limit, blockImportExport, false, password, adminDownState, gracefullShutdown);
+								}
+							}
 						}
                     }
                     else if (luje_rdr["peering_ips_type"].ToString() == "6")
 					{
 						Console.WriteLine($"found peer {luje_rdr["ipaddr6"].ToString()} in IXP {lan.Name} with localpref {lan.BgpLocalPref}");
-						Console.WriteLine($"must deploy on {string.Join(",", lan.Routers)}");
 
 						foreach (var item in lan.Routers)
 						{
-							var router = config.RouterMapping[item];
-							string filename = $"{Configuration.RoutefiltersLocation}/{router.Fqdn}.{router.Vendor}.ipv6.config";
-							bool gracefullShutdown = false;
-							if (router.GracefulShutdown || lan.GracefulShutdown)
+							foreach (var routerAddress in item.IPAddresses)
 							{
-								gracefullShutdown = true;
-							}
-							bool adminDownState = false;
-							if (lan.AdminDownState)
-							{
-								adminDownState = true;
-							}
-							bool blockImportExport = false;
-							if (lan.BlockImportExport)
-							{
-								blockImportExport = true;
-							}
-							if (!filterReady[$"{item}6"].Contains($"AS{luje_rdr["asn"].ToString()}"))
-							{
-								GenerateFilter(filename, 6, $"AS{luje_rdr["asn"].ToString()}", gracefullShutdown, "peer", config.Rpki);
+								if (luje_rdr["owneripaddr6"].ToString() == routerAddress)
+								{
+									Console.WriteLine($"must deploy on {item.Name}");
+									var router = config.RouterMapping[item.Name];
+									string filename = $"{Configuration.RoutefiltersLocation}/{router.Fqdn}.{router.Vendor}.ipv6.config";
+									bool gracefullShutdown = false;
+									if (router.GracefulShutdown || lan.GracefulShutdown)
+									{
+										gracefullShutdown = true;
+									}
+									bool adminDownState = false;
+									if (lan.AdminDownState)
+									{
+										adminDownState = true;
+									}
+									bool blockImportExport = false;
+									if (lan.BlockImportExport)
+									{
+										blockImportExport = true;
+									}
+									if (!filterReady[$"{item.Name}6"].Contains($"AS{luje_rdr["asn"].ToString()}"))
+									{
+										GenerateFilter(filename, 6, $"AS{luje_rdr["asn"].ToString()}", gracefullShutdown, "peer", config.Rpki);
 
-								filterReady[$"{item}6"].Add($"AS{luje_rdr["asn"].ToString()}");
-							}
+										filterReady[$"{item.Name}6"].Add($"AS{luje_rdr["asn"].ToString()}");
+									}
 
-							string neighboorName = $"peer_ipv6_AS{luje_rdr["asn"].ToString()}_{lan.Name}_{Utils.GetNeighborName(luje_rdr["ipaddr6"].ToString())}";
-                            int? limit = null;
-                            if(luje_rdr["info_prefixes6"] != null)
-                            {
-                                limit = Convert.ToInt32(luje_rdr["info_prefixes6"]);
-							}
+									string neighboorName = $"peer_ipv6_AS{luje_rdr["asn"].ToString()}_{lan.Name}_{Utils.GetNeighborName(luje_rdr["ipaddr6"].ToString())}";
+									int? limit = null;
+									if (luje_rdr["info_prefixes6"] != null)
+									{
+										limit = Convert.ToInt32(luje_rdr["info_prefixes6"]);
+									}
 
-                            string? password = null;
-                            if(config.Passwords.ContainsKey($"AS{luje_rdr["asn"].ToString()}"))
-                            {
-                                password = config.Passwords[$"AS{luje_rdr["asn"].ToString()}"];
-							}
+									string? password = null;
+									if (config.Passwords.ContainsKey($"AS{luje_rdr["asn"].ToString()}"))
+									{
+										password = config.Passwords[$"AS{luje_rdr["asn"].ToString()}"];
+									}
 
-							GenerateSession(filename, 6, neighboorName, luje_rdr["name"].ToString(), luje_rdr["ipaddr6"].ToString(), luje_rdr["asn"].ToString(), lan.BgpLocalPref, limit, blockImportExport, false, password, adminDownState, gracefullShutdown);
+									GenerateSession(filename, luje_rdr["owneripaddr6"].ToString(), 6, neighboorName, luje_rdr["name"].ToString(), luje_rdr["ipaddr6"].ToString(), luje_rdr["asn"].ToString(), lan.BgpLocalPref, limit, blockImportExport, false, password, adminDownState, gracefullShutdown);
+								}
+							}
 						}
                     }
                 }
@@ -273,7 +290,7 @@ where peering.peering_peeringdb_id = @peer and peering_ips_extra_active = true a
 										password = config.Passwords[$"AS{luje_rdr["asn"].ToString()}"];
 									}
 
-									GenerateSession(filename, 4, neighboorName, luje_rdr["name"].ToString(), luje_rdr["peering_ips_extra_addr"].ToString(), luje_rdr["asn"].ToString(), subnet.BgpLocalPref, limit, blockImportExport, false, password, adminDownState, gracefullShutdown);
+									GenerateSession(filename, subnet.IPAddress, 4, neighboorName, luje_rdr["name"].ToString(), luje_rdr["peering_ips_extra_addr"].ToString(), luje_rdr["asn"].ToString(), subnet.BgpLocalPref, limit, blockImportExport, false, password, adminDownState, gracefullShutdown);
 									continue;
 								}
 							}
@@ -316,7 +333,7 @@ where peering.peering_peeringdb_id = @peer and peering_ips_extra_active = true a
 										password = config.Passwords[$"AS{luje_rdr["asn"].ToString()}"];
 									}
 
-									GenerateSession(filename, 6, neighboorName, luje_rdr["name"].ToString(), luje_rdr["peering_ips_extra_addr"].ToString(), luje_rdr["asn"].ToString(), subnet.BgpLocalPref, limit, blockImportExport, false, password, adminDownState, gracefullShutdown);
+									GenerateSession(filename, subnet.IPAddress, 6, neighboorName, luje_rdr["name"].ToString(), luje_rdr["peering_ips_extra_addr"].ToString(), luje_rdr["asn"].ToString(), subnet.BgpLocalPref, limit, blockImportExport, false, password, adminDownState, gracefullShutdown);
 									continue;
 								}
 								
@@ -341,7 +358,7 @@ where peering.peering_peeringdb_id = @peer and peering_ips_extra_active = true a
 			luje_conn.Close();
 
 			//deploy filters
-			foreach (var router in config.RouterMapping)
+			Parallel.ForEach(config.RouterMapping, router =>
 			{
 				Console.WriteLine($"Sync filters to router {router.Value.Fqdn}");
 				var processStartInfo = new ProcessStartInfo
@@ -368,7 +385,7 @@ where peering.peering_peeringdb_id = @peer and peering_ips_extra_active = true a
 				{
 					Console.WriteLine(process.StandardOutput.ReadToEnd());
 				}
-			}
+			});
 		}
 
         private static void GenerateFilter(string FileName, int afi, string ASN, bool GracefulShutdown, string Type, bool Rpki)
@@ -460,12 +477,13 @@ prefix set AUTOFILTER_{ASN}_IPv{afi};
             File.AppendAllText(FileName, filterBuilder.ToString());
 		}
 
-        private static void GenerateSession(string FileName, int afi, string NeighboorName, string Name, string IpAddress, string ASN, int? BgpLocalPref, int? Limit, bool BlockImportExport, bool ExportFullTable, string? Password, bool AdminDownState, bool GracefulShutdown)
+        private static void GenerateSession(string FileName, string IPAddress, int afi, string NeighboorName, string Name, string IpAddress, string ASN, int? BgpLocalPref, int? Limit, bool BlockImportExport, bool ExportFullTable, string? Password, bool AdminDownState, bool GracefulShutdown)
         {
 			var sessionBuilder = new StringBuilder();
             sessionBuilder.Append($@"protocol bgp {NeighboorName} {{
     description ""{Name}"";
     neighbor {IpAddress} as {ASN};
+    source address {IPAddress};
     #include ""../ebgp_state.conf"";
     local as 212855;").AppendLine();
             if(BgpLocalPref != null)

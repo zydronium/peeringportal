@@ -144,23 +144,36 @@ else
 				luje_cmd.Prepare();
 				luje_cmd.ExecuteNonQuery();
 
-				luje_cmd = new NpgsqlCommand("select peering.peering_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra.peering_ips_extra_peering_id and peering.peering_deleted = false where peering_ips_extra_deleted = false and peering.peering_id = @peering_id;", luje_conn);
-				luje_cmd.Parameters.AddWithValue("@peering_id", NpgsqlDbType.Integer, Convert.ToInt32(peering_id));
+				int count = 0;
+
+				luje_cmd = new NpgsqlCommand("select peering.peering_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false where peering_ips_deleted = false and peering_ips_rejected = false and peering.peering_id = @id;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@id", NpgsqlDbType.Integer, Convert.ToInt32(peering_id));
 				luje_cmd.Prepare();
 				luje_rdr = luje_cmd.ExecuteReader();
-
 				if (!luje_rdr.Read())
 				{
-					luje_rdr.Close();
-					luje_cmd = new NpgsqlCommand("update peering set peering_deleted = true, peering_modified = NOW() where peering_id = @peering_id and peering_deleted = false;", luje_conn);
-					luje_cmd.Parameters.AddWithValue("@peering_id", NpgsqlDbType.Integer, Convert.ToInt32(peering_id));
+					count++;
+				}
+				luje_rdr.Close();
+
+				luje_cmd = new NpgsqlCommand("select peering.peering_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra.peering_ips_extra_peering_id and peering.peering_deleted = false where peering_ips_extra_deleted = false and peering.peering_id = @id;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@id", NpgsqlDbType.Integer, Convert.ToInt32(peering_id));
+				luje_cmd.Prepare();
+				luje_rdr = luje_cmd.ExecuteReader();
+				if (!luje_rdr.Read())
+				{
+					count++;
+				}
+				luje_rdr.Close();
+
+				if (count == 2)
+				{
+					luje_cmd = new NpgsqlCommand("update peering set peering_deleted = true, peering_modified = NOW() where peering_id = @id and peering_deleted = false;", luje_conn);
+					luje_cmd.Parameters.AddWithValue("@id", NpgsqlDbType.Integer, Convert.ToInt32(peering_id));
 					luje_cmd.Prepare();
 					luje_cmd.ExecuteNonQuery();
 				}
-				else
-				{
-					luje_rdr.Close();
-				}
+
 			}
 			else
 			{

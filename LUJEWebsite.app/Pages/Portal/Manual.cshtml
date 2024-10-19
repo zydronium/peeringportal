@@ -87,7 +87,13 @@ else
 		}
 		luje_rdr.Close();
 
-		luje_cmd = new NpgsqlCommand("select peeringdb_network_ixlan.id, peeringdb_ix.name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6 from peeringdb_network_ixlan inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id where asn = @asn;", luje_conn);
+		luje_cmd = new NpgsqlCommand(@"select peeringdb_network_ixlan.id, peeringdb_ix.name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, owner_peeringdb_network_ixlan.id as ownerid, owner_peeringdb_network_ixlan.ipaddr4 as owneripaddr4, owner_peeringdb_network_ixlan.ipaddr6 as owneripaddr6
+from peeringdb_network_ixlan
+inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id
+inner join peeringdb_network_ixlan as owner_peeringdb_network_ixlan on peeringdb_ixlan.id = owner_peeringdb_network_ixlan.ixlan_id and owner_peeringdb_network_ixlan.asn = @ownerasn
+inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id
+where peeringdb_network_ixlan.asn = @asn;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@ownerasn", NpgsqlDbType.Integer, Convert.ToInt32(Configuration.PortalOwnerAsn));
 		luje_cmd.Parameters.AddWithValue("@asn", NpgsqlDbType.Integer, Convert.ToInt32(asnQuery));
 		luje_cmd.Prepare();
 		luje_rdr = luje_cmd.ExecuteReader();
@@ -103,7 +109,10 @@ else
 							ixlan_id = luje_rdr["ixlan_id"].ToString(),
 							net_id = luje_rdr["net_id"].ToString(),
 							ipaddr4 = luje_rdr["ipaddr4"].ToString(),
-							ipaddr6 = luje_rdr["ipaddr6"].ToString()
+							ipaddr6 = luje_rdr["ipaddr6"].ToString(),
+							ownerid = luje_rdr["ownerid"].ToString(),
+							owneripaddr4 = luje_rdr["owneripaddr4"].ToString(),
+							owneripaddr6 = luje_rdr["owneripaddr6"].ToString()
 						};
 			networkList.Add(entry);
 		}
@@ -137,9 +146,10 @@ else
 							bool requestable = true;
 							if (knownnetwork)
 							{
-								luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_type = 4 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
+								luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 4 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
 								luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
 								luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.id));
+								luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ownerid));
 								luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ixlan_id));
 								luje_cmd.Prepare();
 								luje_rdr = luje_cmd.ExecuteReader();
@@ -168,14 +178,14 @@ else
 							}
 							<tr>
 								<td width="20%">@entry.name</td>
-								<td width="40%">@entry.ipaddr4</td>
+								<td width="40%">Peer: @entry.ipaddr4<br />Ours: @entry.owneripaddr4</td>
 								<td width="20%">@status</td>
 								<td width="20%">
 									@if (requestable)
 									{
-										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&v=4">add</a>
+										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=4">add</a>
 									}else{
-										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&v=4">delete</a>
+										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=4">delete</a>
 									}
 								</td>
 							</tr>
@@ -186,9 +196,10 @@ else
 							bool requestable = true;
 							if (knownnetwork)
 							{
-								luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_type = 6 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
+								luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 6 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
 								luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
 								luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.id));
+								luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ownerid));
 								luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ixlan_id));
 								luje_cmd.Prepare();
 								luje_rdr = luje_cmd.ExecuteReader();
@@ -217,14 +228,14 @@ else
 							}
 							<tr>
 								<td width="20%">@entry.name</td>
-								<td width="40%">@entry.ipaddr6</td>
+								<td width="40%">Peer: @entry.ipaddr6<br />Ours: @entry.owneripaddr6</td>
 								<td width="20%">@status</td>
 								<td width="20%">
 									@if (requestable)
 									{
-										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&v=6">add</a>
+										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=6">add</a>
 									}else{
-										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&v=6">delete</a>
+										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=6">delete</a>
 									}
 								</td>
 							</tr>

@@ -33,11 +33,11 @@ namespace LUJEWebsite.PeeringGenerator
 				return Environment.GetEnvironmentVariable("PORTAL_OWNER_ASN");
 			}
 		}
-		public static string PortalRipePassword
+		public static string PfxPassword
 		{
 			get
 			{
-				return Environment.GetEnvironmentVariable("PORTAL_RIPE_PASSWORD");
+				return Environment.GetEnvironmentVariable("PFX_PASSWORD");
 			}
 		}
 		public static string RoutefiltersLocation

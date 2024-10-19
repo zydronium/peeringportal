@@ -8,6 +8,9 @@
 		public string net_id { get; set; }
 		public string ipaddr4 { get; set; }
 		public string ipaddr6 { get; set; }
+		public string ownerid { get; set; }
+		public string owneripaddr4 { get; set; }
+		public string owneripaddr6 { get; set; }
 
 	}
 }

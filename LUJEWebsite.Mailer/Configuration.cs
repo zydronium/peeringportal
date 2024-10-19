@@ -18,8 +18,22 @@ namespace LUJEWebsite.Mailer
                 string name = Environment.GetEnvironmentVariable("DATABASE_NAME");
                 return String.Format("Server={0};Database={1};Uid={2};Pwd={3};", server, name, user, password);
             }
-        }
-        public static string MailServer
+		}
+		public static string PortalExport
+		{
+			get
+			{
+				return Environment.GetEnvironmentVariable("PORTAL_EXPORT");
+			}
+		}
+		public static string PortalOwnerAsn
+		{
+			get
+			{
+				return Environment.GetEnvironmentVariable("PORTAL_OWNER_ASN");
+			}
+		}
+		public static string MailServer
         {
             get
             {

@@ -6,7 +6,13 @@
     "64": {
       "Name": "nlix",
       "Routers": [
-        "nikhef1"
+        {
+          "Name": "nikhef1",
+          "IPAddresses": [
+            "193.239.116.87",
+            "2001:7f8:13::a521:2855:1"
+          ],
+        }
       ],
       "GracefulShutdown": false,
       "AdminDownState": false,
@@ -16,7 +22,13 @@
     "1308": {
       "Name": "lsix",
       "Routers": [
-        "nikhef1"
+        {
+          "Name": "nikhef1",
+          "IPAddresses": [
+            "185.1.32.62",
+            "2001:7f8:8f::a521:2855:1"
+          ],
+        }
       ],
       "GracefulShutdown": false,
       "AdminDownState": false,
@@ -26,7 +38,13 @@
     "1842": {
       "Name": "speedix",
       "Routers": [
-        "nikhef1"
+        {
+          "Name": "nikhef1",
+          "IPAddresses": [
+            "185.1.222.227",
+            "2001:7f8:b7::a521:2855:1"
+          ],
+        }
       ],
       "GracefulShutdown": false,
       "AdminDownState": false,
@@ -36,7 +54,13 @@
     "2601": {
       "Name": "locix",
       "Routers": [
-        "nikhef1"
+        {
+          "Name": "nikhef1",
+          "IPAddresses": [
+            "185.1.138.40",
+            "2a0c:b641:700:0:a5:21:2855:1"
+          ],
+        }
       ],
       "GracefulShutdown": false,
       "AdminDownState": false,
@@ -46,7 +70,13 @@
     "3512": {
       "Name": "frysix",
       "Routers": [
-        "nikhef1"
+        {
+          "Name": "nikhef1",
+          "IPAddresses": [
+            "185.1.203.152",
+            "2001:7f8:10f::3:3f95:152"
+          ],
+        }
       ],
       "GracefulShutdown": false,
       "AdminDownState": false,
@@ -56,7 +86,13 @@
     "3756": {
       "Name": "fogixp",
       "Routers": [
-        "nikhef1"
+        {
+          "Name": "nikhef1",
+          "IPAddresses": [
+            "185.1.147.42",
+            "2001:7f8:ca:1::42"
+          ],
+        }
       ],
       "GracefulShutdown": false,
       "AdminDownState": false,
@@ -76,6 +112,7 @@
       "ExtraPrefix": [
         {
           "Subnet": "94.142.240.0/24",
+          "IPAddress": "94.142.240.20",
           "Name": "coloclue_eun",
           "Afi": 4,
           "GracefulShutdown": false,
@@ -85,6 +122,7 @@
         },
         {
           "Subnet": "2a02:898:0:20::/64",
+          "IPAddress": "2a02:898:0:20::166:1",
           "Name": "coloclue_eun",
           "Afi": 6,
           "GracefulShutdown": false,

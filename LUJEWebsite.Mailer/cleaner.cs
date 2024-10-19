@@ -23,7 +23,11 @@ namespace LUJEWebsite.Mailer
 
 		public static void cleanup_peers(NpgsqlConnection luje_conn)
 		{
-			NpgsqlCommand luje_cmd = new NpgsqlCommand("select peering_ips.peering_ips_peering_id, peering_ips.peering_ips_id, peering_ips.peering_ips_peeringdb_lanid, peering_ips.peering_ips_peeringdb_addrid, peering_ips.peering_ips_type, peering.peering_peeringdb_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false where peering_ips_active = true and peering_ips_deleted = false order by peering_asn asc;", luje_conn);
+			NpgsqlCommand luje_cmd = new NpgsqlCommand(@"select peering.peering_asn, peering.peering_name, peering_ips.peering_ips_addr, peering_ips.peering_ips_peering_id, peering_ips.peering_ips_id, peering_ips.peering_ips_peeringdb_lanid, peering_ips.peering_ips_peeringdb_addrid, peering_ips.peering_ips_peeringdb_oaddrid, peering_ips.peering_ips_type, peering.peering_peeringdb_id 
+from peering_ips 
+inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false 
+where peering_ips_active = true and peering_ips_deleted = false 
+order by peering_asn asc;", luje_conn);
 			NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 			var networkList = new List<NetworkEntry>();
 
@@ -35,8 +39,12 @@ namespace LUJEWebsite.Mailer
 					peering_ips_id = luje_rdr["peering_ips_id"].ToString(),
 					peering_ips_peeringdb_lanid = luje_rdr["peering_ips_peeringdb_lanid"].ToString(),
 					peering_ips_peeringdb_addrid = luje_rdr["peering_ips_peeringdb_addrid"].ToString(),
+					peering_ips_peeringdb_oaddrid = luje_rdr["peering_ips_peeringdb_oaddrid"].ToString(),
 					peering_ips_type = luje_rdr["peering_ips_type"].ToString(),
-					peering_peeringdb_id = luje_rdr["peering_peeringdb_id"].ToString()
+					peering_peeringdb_id = luje_rdr["peering_peeringdb_id"].ToString(),
+					peering_asn = luje_rdr["peering_asn"].ToString(),
+					peering_name = luje_rdr["peering_name"].ToString(),
+					peering_ips_addr = luje_rdr["peering_ips_addr"].ToString()
 				};
 				networkList.Add(entry);
 			}
@@ -52,35 +60,36 @@ namespace LUJEWebsite.Mailer
             bool remove = false;
 			foreach (var entry in networkList)
 			{
-				luje_cmd = new NpgsqlCommand("select peeringdb_network_ixlan.id, peeringdb_ix.name as ix_name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, peeringdb_network.asn, peeringdb_network.name from peeringdb_network_ixlan inner join peeringdb_network on peeringdb_network.id = peeringdb_network_ixlan.net_id inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id where peeringdb_network.id = @peeringdb_id and peeringdb_network_ixlan.id = @addrid and peeringdb_network_ixlan.ixlan_id = @lanid;", luje_conn);
+				luje_cmd = new NpgsqlCommand(@"select peeringdb_network_ixlan.id, peeringdb_ix.name as ix_name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, peeringdb_network.asn, peeringdb_network.name 
+from peeringdb_network_ixlan 
+inner join peeringdb_network on peeringdb_network.id = peeringdb_network_ixlan.net_id 
+inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id 
+inner join peeringdb_network_ixlan as owner_peeringdb_network_ixlan on peeringdb_ixlan.id = owner_peeringdb_network_ixlan.ixlan_id and owner_peeringdb_network_ixlan.id = @oaddrid
+inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id 
+where peeringdb_network.id = @peeringdb_id and peeringdb_network_ixlan.id = @addrid and peeringdb_network_ixlan.ixlan_id = @lanid;", luje_conn);
 				luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(entry.peering_peeringdb_id));
 				luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.peering_ips_peeringdb_addrid));
+				luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.peering_ips_peeringdb_oaddrid));
 				luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(entry.peering_ips_peeringdb_lanid));
 				luje_cmd.Prepare();
 				luje_rdr = luje_cmd.ExecuteReader();
-				if (luje_rdr.Read())
+				if (!luje_rdr.Read())
                 {
-                    string addr = "";
-                    string asn = "AS" + luje_rdr["asn"].ToString();
-                    if (entry.peering_ips_type == "4")
-                    {
-                        addr = luje_rdr["ipaddr4"].ToString();
-                    }
-                    else if (entry.peering_ips_type == "6")
-                    {
-                        addr = luje_rdr["ipaddr6"].ToString();
-                    }
-                    stringbBuilder.Append("- ");
-                    stringbBuilder.Append(asn);
-                    stringbBuilder.Append(" ");
-                    stringbBuilder.Append(luje_rdr["name"].ToString());
-                    stringbBuilder.Append(" ");
-                    stringbBuilder.Append(luje_rdr["ix_name"].ToString());
-                    stringbBuilder.Append(" ");
-                    stringbBuilder.Append(addr);
+                    string asn = "AS" + entry.peering_asn;
+                    stringbBuilder.Append("- id: ");
+					stringbBuilder.Append(entry.peering_ips_peering_id);
+					stringbBuilder.Append(" ip id: ");
+					stringbBuilder.Append(entry.peering_ips_id);
+					stringbBuilder.Append(" asn: ");
+					stringbBuilder.Append(asn);
+                    stringbBuilder.Append(" name: ");
+                    stringbBuilder.Append(entry.peering_name);
+                    stringbBuilder.Append(" ip addr: ");
+                    stringbBuilder.Append(entry.peering_ips_addr);
                     stringbBuilder.AppendLine("");
 
                     var peer = new PeerModel { Id = Convert.ToInt32(entry.peering_ips_id), PeeringID = Convert.ToInt32(entry.peering_ips_peering_id) };
+					peers.Add(peer);
 					remove = true;
 				}
 				luje_rdr.Close();
@@ -92,27 +101,40 @@ namespace LUJEWebsite.Mailer
             foreach (PeerModel peer in peers)
 			{
 				notify = true;
-                luje_cmd = new NpgsqlCommand("update peering_ips set peering_ips_rejected = true, peering_ips_modified = NOW() where peering_ips_id = @id and peering_ips_deleted = false;", luje_conn);
+                luje_cmd = new NpgsqlCommand("update peering_ips set peering_ips_deleted = true, peering_ips_modified = NOW() where peering_ips_id = @id and peering_ips_deleted = false;", luje_conn);
 				luje_cmd.Parameters.AddWithValue("@id", NpgsqlDbType.Integer, peer.Id);
 				luje_cmd.Prepare();
 				luje_cmd.ExecuteNonQuery();
+
+
+				int count = 0;
 
 				luje_cmd = new NpgsqlCommand("select peering.peering_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false where peering_ips_deleted = false and peering_ips_rejected = false and peering.peering_id = @id;", luje_conn);
 				luje_cmd.Parameters.AddWithValue("@id", NpgsqlDbType.Integer, peer.PeeringID);
 				luje_cmd.Prepare();
 				luje_rdr = luje_cmd.ExecuteReader();
-
 				if (!luje_rdr.Read())
 				{
-					luje_rdr.Close();
+					count++;
+				}
+				luje_rdr.Close();
+
+				luje_cmd = new NpgsqlCommand("select peering.peering_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra.peering_ips_extra_peering_id and peering.peering_deleted = false where peering_ips_extra_deleted = false and peering.peering_id = @id;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@id", NpgsqlDbType.Integer, peer.PeeringID);
+				luje_cmd.Prepare();
+				luje_rdr = luje_cmd.ExecuteReader();
+				if (!luje_rdr.Read())
+				{
+					count++;
+				}
+				luje_rdr.Close();
+
+				if (count == 2)
+				{
 					luje_cmd = new NpgsqlCommand("update peering set peering_deleted = true, peering_modified = NOW() where peering_id = @id and peering_deleted = false;", luje_conn);
 					luje_cmd.Parameters.AddWithValue("@id", NpgsqlDbType.Integer, peer.PeeringID);
 					luje_cmd.Prepare();
 					luje_cmd.ExecuteNonQuery();
-				}
-				else
-				{
-					luje_rdr.Close();
 				}
             }
 

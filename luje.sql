@@ -79,6 +79,7 @@ CREATE TABLE public.peering_ips (
     peering_ips_peering_id integer NOT NULL,
     peering_ips_peeringdb_lanid integer NOT NULL,
     peering_ips_peeringdb_addrid integer NOT NULL,
+    peering_ips_peeringdb_oaddrid integer NOT NULL,
     peering_ips_type integer NOT NULL,
     peering_ips_addr character varying(255),
     peering_ips_active boolean,
