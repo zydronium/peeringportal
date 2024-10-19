@@ -9,7 +9,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using NpgsqlTypes;
-using LUJEWebsite.PeeringGenerator.Models;
 
 namespace LUJEWebsite.PeeringGenerator
 {
@@ -236,32 +235,32 @@ namespace LUJEWebsite.PeeringGenerator
 			{
 				return;
 			}
-
+			
 			// BIRD IPv4 and IPv6
-			Parallel.ForEach(new[] { 4, 6 }, v =>
-			{
-				string filename = $"{Configuration.RoutefiltersLocation}/AS{asnumber}.prefixset.bird.ipv{v}";
+			foreach (var v in new[] { 4, 6 })
+            {
+                string filename = $"{Configuration.RoutefiltersLocation}/AS{asnumber}.prefixset.bird.ipv{v}";
 
-				if (File.Exists(filename))
-				{
-					if (DateTime.Now - File.GetLastWriteTime(filename) > TimeSpan.FromMinutes(5))
+                if (File.Exists(filename))
+                {
+                    if (DateTime.Now - File.GetLastWriteTime(filename) > TimeSpan.FromMinutes(5))
 					{
 						RunBgpq4(filename, v, as_set, "b", null, "");
 						//parseSaveFilter(filename, v);
 						Console.WriteLine($"bird ipv{v} refreshed: {filename}");
-					}
-					else
-					{
-						Console.WriteLine($"bird ipv{v} cached: {filename}");
-					}
-				}
-				else
-				{
-					RunBgpq4(filename, v, as_set, "b", null, "");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"bird ipv{v} cached: {filename}");
+                    }
+                }
+                else
+                {
+                    RunBgpq4(filename, v, as_set, "b", null, "");
 					//parseSaveFilter(filename, v);
 					Console.WriteLine($"bird ipv{v} created: {filename}");
-				}
-			});
+                }
+            }
         }
     }
 }
