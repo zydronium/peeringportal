@@ -1,6 +1,8 @@
+using LUJEWebsite.app.Model;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);

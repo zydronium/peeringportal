@@ -2,6 +2,8 @@
 {
     public class Configuration
     {
+
+
         public static string DBPath
         {
             get

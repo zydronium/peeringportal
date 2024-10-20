@@ -6,7 +6,14 @@
 @using NpgsqlTypes;
 @using System.Collections;
 @using LUJEWebsite.app.Utils;
+@using Newtonsoft.Json;
+@using System.Net;
+@using System.Net.Sockets;
+
 @{
+	string configFile = System.IO.File.ReadAllText("peeringconfig.json");
+	Config config = JsonConvert.DeserializeObject<Config>(configFile);
+
 	HttpClient client = new HttpClient();
 	ViewData["Title"] = "Peering Portal";
 	bool loggedin = false;
@@ -156,7 +163,19 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 									}
 									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == true)
 									{
-										status = "Deployed";
+										var lan = config.LanMapping[entry.ixlan_id];
+										var matchingRouter = lan.Routers.FirstOrDefault(item => item.IPAddresses.Contains(entry.owneripaddr4));
+										if (matchingRouter != null)
+										{
+											var neighboorName = $"peer_AS{selectedNetwork.asn}_{lan.Name}_ipv4_{Utils.GetNeighborName(entry.ipaddr4)}";
+											var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
+											var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
+											status = Utils.GetInfoValue(birdlgOutput);
+										}
+										else
+										{
+											status = "Deployed";
+										}
 									}
 								}
 								luje_rdr.Close();
@@ -203,7 +222,19 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 									}
 									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == true)
 									{
-										status = "Deployed";
+										var lan = config.LanMapping[entry.ixlan_id];
+										var matchingRouter = lan.Routers.FirstOrDefault(item => item.IPAddresses.Contains(entry.owneripaddr6));
+										if (matchingRouter != null)
+										{
+											var neighboorName = $"peer_AS{selectedNetwork.asn}_{lan.Name}_ipv6_{Utils.GetNeighborName(entry.ipaddr6)}";
+											var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
+											var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
+											status = Utils.GetInfoValue(birdlgOutput);
+										}
+										else
+										{
+											status = "Deployed";
+										}
 									}
 								}
 								luje_rdr.Close();
@@ -243,6 +274,20 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 					</tr>
 					@while (luje_rdr.Read())
 					{
+						IPAddress ipAddress = IPAddress.Parse(luje_rdr["peering_ips_extra_addr"].ToString());
+						string ipAddressStr = luje_rdr["peering_ips_extra_addr"].ToString();
+
+						var matchingRouter = config.RouterMapping
+							.SelectMany(router => router.Value.ExtraPrefix, (router, subnet) => new { Router = router.Key, RouterValue = router.Value, Subnet = subnet })
+							.FirstOrDefault(rs =>
+								(ipAddress.AddressFamily == AddressFamily.InterNetworkV6 && rs.Subnet.Afi == 6 ||
+								ipAddress.AddressFamily == AddressFamily.InterNetwork && rs.Subnet.Afi == 4) &&
+								Utils.IsInSubnet(ipAddress, rs.Subnet.Subnet));
+
+						if (matchingRouter == null)
+						{
+							continue;
+						}
 						string status = "Not configured";
 						if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == false)
 						{
@@ -254,10 +299,13 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 						}
 						else if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_extra_deployed"]) == true)
 						{
-							status = "Deployed";
+							var neighborName = $"peer_AS{selectedNetwork.asn}_{matchingRouter.Subnet.Name}_ipv{matchingRouter.Subnet.Afi}_{Utils.GetNeighborName(ipAddressStr)}";
+							var hostname = matchingRouter.RouterValue.Hostname;
+							var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighborName);
+							status = Utils.GetInfoValue(birdlgOutput);
 						}
 						<tr>
-							<td width="60%">@luje_rdr["peering_ips_extra_addr"].ToString()</td>
+							<td width="60%">Yours: @luje_rdr["peering_ips_extra_addr"].ToString()<br />Ours: @matchingRouter.Subnet.IPAddress</td>
 							<td width="40%">@status</td>
 						</tr>
 					}
@@ -265,7 +313,6 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 			}
 		</div>
 		luje_rdr.Close();
-		luje_conn.Close();
 		luje_conn.Close();
 	}
 	catch (HttpRequestException e)
