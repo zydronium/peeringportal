@@ -182,10 +182,16 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 										var matchingRouter = lan.Routers.FirstOrDefault(item => item.IPAddresses.Contains(entry.owneripaddr4));
 										if (matchingRouter != null)
 										{
-											var neighboorName = $"peer_AS{asnQuery}_{lan.Name}_ipv4_{Utils.GetNeighborName(entry.ipaddr4)}";
-											var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
-											var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
-											status = Utils.GetInfoValue(birdlgOutput);
+											try{
+                                                var neighboorName = $"peer_AS{asnQuery}_{lan.Name}_ipv4_{Utils.GetNeighborName(entry.ipaddr4)}";
+                                                var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
+                                                var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
+                                                status = Utils.GetInfoValue(birdlgOutput);
+                                            }
+                                            catch (Exception e)
+                                            {
+                                                status = "Deployed";
+                                            }
 										}
 										else
 										{
@@ -244,10 +250,16 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 										var matchingRouter = lan.Routers.FirstOrDefault(item => item.IPAddresses.Contains(entry.owneripaddr6));
 										if (matchingRouter != null)
 										{
-											var neighboorName = $"peer_AS{asnQuery}_{lan.Name}_ipv6_{Utils.GetNeighborName(entry.ipaddr6)}";
-											var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
-											var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
-											status = Utils.GetInfoValue(birdlgOutput);
+											try {
+                                                var neighboorName = $"peer_AS{asnQuery}_{lan.Name}_ipv6_{Utils.GetNeighborName(entry.ipaddr6)}";
+                                                var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
+                                                var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
+                                                status = Utils.GetInfoValue(birdlgOutput);
+                                            }
+                                            catch (Exception e)
+                                            {
+                                                status = "Deployed";
+                                            }
 										}
 										else
 										{
@@ -322,12 +334,16 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 						}
 						else if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_extra_deployed"]) == true)
 						{
-
-							var neighborName = $"peer_AS{asnQuery}_{matchingRouter.Subnet.Name}_ipv{matchingRouter.Subnet.Afi}_{Utils.GetNeighborName(ipAddressStr)}";
-
-							var hostname = matchingRouter.RouterValue.Hostname;
-							var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighborName);
-							status = Utils.GetInfoValue(birdlgOutput);
+							try {
+								var neighborName = $"peer_AS{asnQuery}_{matchingRouter.Subnet.Name}_ipv{matchingRouter.Subnet.Afi}_{Utils.GetNeighborName(ipAddressStr)}";
+								var hostname = matchingRouter.RouterValue.Hostname;
+								var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighborName);
+								status = Utils.GetInfoValue(birdlgOutput);
+							}
+							catch (Exception e)
+                            {
+								status = "Deployed";
+							}
 						}
 						<tr>
 							<td width="60%">Peer: @luje_rdr["peering_ips_extra_addr"].ToString()<br />Ours: @matchingRouter.Subnet.IPAddress</td>
