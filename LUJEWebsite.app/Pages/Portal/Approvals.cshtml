@@ -47,52 +47,56 @@ where peering_ips_active = false and peering_ips_rejected = false and peering_ip
 		luje_cmd.Prepare();
 		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 
-		<div class="columns nine">
-			<h2>Peering Admin</h2>
-			<p><a href="/portal/admin">Admin</a> - <a href="/portal/approvals">Pending approvals</a> - <a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
-			<h3>Approvals</h3>
-			<table width="100%">
-				<tr>
-					<td width="20%">ASN</td>
-					<td width="20%">Name</td>
-					<td width="20%">IXP</td>
-					<td width="30%">IP Address</td>
-					<td width="10%"></td>
-				</tr>
-				<tr>
-					<td width="20%"></td>
-					<td width="20%"></td>
-					<td width="20%"></td>
-					<td width="30%"></td>
-					<td width="10%"></td>
-				</tr>
-				@while (luje_rdr.Read())
-				{
-					string addr = "";
-					string owneraddr = "";
-					string asn = "AS" + luje_rdr["asn"].ToString();
-					if (luje_rdr["peering_ips_type"].ToString() == "4")
-					{
-						addr = luje_rdr["ipaddr4"].ToString();
-						owneraddr = luje_rdr["owneripaddr4"].ToString();
-					}
-					else if (luje_rdr["peering_ips_type"].ToString() == "6")
-					{
-						addr = luje_rdr["ipaddr6"].ToString();
-						owneraddr = luje_rdr["owneripaddr6"].ToString();
-					}
-					<tr>
-						<td width="20%">@asn</td>
-						<td width="20%">@luje_rdr["name"].ToString()</td>
-						<td width="20%">@luje_rdr["ix_name"].ToString()</td>
-						<td width="30%">Peer: @addr<br />Ours: @owneraddr</td>
-						<td width="10%"><a href="/portal/approve?id=@luje_rdr["peering_ips_id"].ToString()&approve=y">Yes</a> <a href="/portal/approve?id=@luje_rdr["peering_ips_id"].ToString()&approve=n">No</a></td>
-					</tr>
-				}
-				@{
-					luje_rdr.Close();
-				}
-			</table>
+		<div class="wrapper post">
+			<main class="page-content" aria-label="Content">
+				<article>
+					<header class="header">
+						<h1 class="header-title">Peering Admin</h1>
+					</header>
+
+					<div class="page-content">
+						<p><a href="/portal/admin">Admin</a> - <a href="/portal/approvals">Pending approvals</a> - <a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
+						<h3>Approvals</h3>
+						<table width="100%">
+							<thead>
+								<tr>
+									<td width="20%">ASN</td>
+									<td width="20%">Name</td>
+									<td width="20%">IXP</td>
+									<td width="30%">IP Address</td>
+									<td width="10%"></td>
+								</tr>
+							</thead>
+							@while (luje_rdr.Read())
+							{
+								string addr = "";
+								string owneraddr = "";
+								string asn = "AS" + luje_rdr["asn"].ToString();
+								if (luje_rdr["peering_ips_type"].ToString() == "4")
+								{
+									addr = luje_rdr["ipaddr4"].ToString();
+									owneraddr = luje_rdr["owneripaddr4"].ToString();
+								}
+								else if (luje_rdr["peering_ips_type"].ToString() == "6")
+								{
+									addr = luje_rdr["ipaddr6"].ToString();
+									owneraddr = luje_rdr["owneripaddr6"].ToString();
+								}
+								<tr>
+									<td width="20%">@asn</td>
+									<td width="20%">@luje_rdr["name"].ToString()</td>
+									<td width="20%">@luje_rdr["ix_name"].ToString()</td>
+									<td width="30%">Peer: @addr<br />Ours: @owneraddr</td>
+									<td width="10%"><a href="/portal/approve?id=@luje_rdr["peering_ips_id"].ToString()&approve=y">Yes</a> <a href="/portal/approve?id=@luje_rdr["peering_ips_id"].ToString()&approve=n">No</a></td>
+								</tr>
+							}
+							@{
+								luje_rdr.Close();
+							}
+						</table>
+					</div>
+				</article>
+			</main>
 		</div>
 
 		luje_conn.Close();

@@ -125,240 +125,251 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 		}
 		luje_rdr.Close();
 
-		<div class="columns nine">
-			<h2>Peering Admin</h2>
-			<p><a href="/portal/admin">Admin</a> - <a href="/portal/manual?asn=@asnQuery">@networkName (@asn)</a> - <a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
-			<h3>Manual action</h3>
+		<div class="wrapper post">
+			<main class="page-content" aria-label="Content">
+				<article>
+					<header class="header">
+						<h1 class="header-title">Peering Admin</h1>
+					</header>
 
-			<table width="100%">
-				<tr>
-					<td width="20%">IXP</td>
-					<td width="40%">IP Address</td>
-					<td width="20%">Status</td>
-					<td width="20%"></td>
-				</tr>
-				<tr>
-					<td width="20%"></td>
-					<td width="40%"></td>
-					<td width="20%"></td>
-					<td width="20%"></td>
-				</tr>
-				@foreach (var entry in networkList)
-				{
-					if (ixlanlist.Contains(entry.ixlan_id))
-					{
-						if (entry.ipaddr4 != null && entry.ipaddr4.ToString() != "")
-						{
-							string status = "Not configured";
-							bool requestable = true;
-							if (knownnetwork)
+					<div class="page-content">
+						<p><a href="/portal/admin">Admin</a> - <a href="/portal/manual?asn=@asnQuery">@networkName (@asn)</a> - <a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
+						<h3>Manual action</h3>
+
+						<table width="100%">
+							<thead>
+								<tr>
+									<td width="20%">IXP</td>
+									<td width="40%">IP Address</td>
+									<td width="20%">Status</td>
+									<td width="20%"></td>
+								</tr>
+							</thead>
+							@foreach (var entry in networkList)
 							{
-								luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 4 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
-								luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
-								luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.id));
-								luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ownerid));
-								luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ixlan_id));
-								luje_cmd.Prepare();
-								luje_rdr = luje_cmd.ExecuteReader();
-
-								if (luje_rdr.Read())
+								if (ixlanlist.Contains(entry.ixlan_id))
 								{
-									requestable = false;
-									if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == false)
+									if (entry.ipaddr4 != null && entry.ipaddr4.ToString() != "")
+									{
+										string status = "Not configured";
+										bool requestable = true;
+										if (knownnetwork)
+										{
+											luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 4 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
+											luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
+											luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.id));
+											luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ownerid));
+											luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ixlan_id));
+											luje_cmd.Prepare();
+											luje_rdr = luje_cmd.ExecuteReader();
+
+											if (luje_rdr.Read())
+											{
+												requestable = false;
+												if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == false)
+												{
+													status = "Pending approval";
+												}
+												else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == true)
+												{
+													status = "Rejected";
+												}
+												else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == false)
+												{
+													status = "Pending deployment";
+												}
+												else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == true)
+												{
+													var lan = config.LanMapping[entry.ixlan_id];
+													var matchingRouter = lan.Routers.FirstOrDefault(item => item.IPAddresses.Contains(entry.owneripaddr4));
+													if (matchingRouter != null)
+													{
+														try
+														{
+															var neighboorName = $"peer_AS{asnQuery}_{lan.Name}_ipv4_{Utils.GetNeighborName(entry.ipaddr4)}";
+															var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
+															var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
+															status = Utils.GetInfoValue(birdlgOutput);
+														}
+														catch (Exception e)
+														{
+															status = "Deployed";
+														}
+													}
+													else
+													{
+														status = "Deployed";
+													}
+												}
+											}
+											luje_rdr.Close();
+										}
+										<tr>
+											<td width="20%">@entry.name</td>
+											<td width="40%">Peer: @entry.ipaddr4<br />Ours: @entry.owneripaddr4</td>
+											<td width="20%">@status</td>
+											<td width="20%">
+												@if (requestable)
+												{
+													<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=4">add</a>
+												}
+												else
+												{
+													<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=4">delete</a>
+												}
+											</td>
+										</tr>
+									}
+									if (entry.ipaddr6 != null && entry.ipaddr6 != "")
+									{
+										string status = "Not configured";
+										bool requestable = true;
+										if (knownnetwork)
+										{
+											luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 6 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
+											luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
+											luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.id));
+											luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ownerid));
+											luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ixlan_id));
+											luje_cmd.Prepare();
+											luje_rdr = luje_cmd.ExecuteReader();
+
+											if (luje_rdr.Read())
+											{
+												requestable = false;
+												if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == false)
+												{
+													status = "Pending approval";
+												}
+												else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == true)
+												{
+													status = "Rejected";
+												}
+												else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == false)
+												{
+													status = "Pending deployment";
+												}
+												else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == true)
+												{
+													var lan = config.LanMapping[entry.ixlan_id];
+													var matchingRouter = lan.Routers.FirstOrDefault(item => item.IPAddresses.Contains(entry.owneripaddr6));
+													if (matchingRouter != null)
+													{
+														try
+														{
+															var neighboorName = $"peer_AS{asnQuery}_{lan.Name}_ipv6_{Utils.GetNeighborName(entry.ipaddr6)}";
+															var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
+															var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
+															status = Utils.GetInfoValue(birdlgOutput);
+														}
+														catch (Exception e)
+														{
+															status = "Deployed";
+														}
+													}
+													else
+													{
+														status = "Deployed";
+													}
+												}
+											}
+											luje_rdr.Close();
+										}
+										<tr>
+											<td width="20%">@entry.name</td>
+											<td width="40%">Peer: @entry.ipaddr6<br />Ours: @entry.owneripaddr6</td>
+											<td width="20%">@status</td>
+											<td width="20%">
+												@if (requestable)
+												{
+													<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=6">add</a>
+												}
+												else
+												{
+													<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=6">delete</a>
+												}
+											</td>
+										</tr>
+									}
+								}
+							}
+						</table>
+
+						<h3>Extra IPs</h3>
+						@{
+							luje_cmd = new NpgsqlCommand("select peering_ips_extra_active, peering_ips_extra_deployed, peering_ips_extra_addr, peering_ips_extra_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra_peering_id and peering_deleted = false where peering_peeringdb_id = @peeringdb_id and peering_ips_extra_deleted = false;", luje_conn);
+							luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
+							luje_cmd.Prepare();
+							luje_rdr = luje_cmd.ExecuteReader();
+						}
+						<form method="post" action="/portal/extra?asn=@asnQuery">
+							<input type="hidden" name="__RequestVerificationToken" value="@Xsrf.GetAndStoreTokens(Model.HttpContext).RequestToken" />
+							<table width="100%">
+								<tr>
+									<td width="60%">IP Address</td>
+									<td width="20%">Status</td>
+									<td width="20%"></td>
+								</tr>
+								<tr>
+									<td width="60%"></td>
+									<td width="20%"></td>
+									<td width="20%"></td>
+								</tr>
+								@while (luje_rdr.Read())
+								{
+									IPAddress ipAddress = IPAddress.Parse(luje_rdr["peering_ips_extra_addr"].ToString());
+									string ipAddressStr = luje_rdr["peering_ips_extra_addr"].ToString();
+
+									var matchingRouter = config.RouterMapping
+									.SelectMany(router => router.Value.ExtraPrefix, (router, subnet) => new { Router = router.Key, RouterValue = router.Value, Subnet = subnet })
+									.FirstOrDefault(rs =>
+									(ipAddress.AddressFamily == AddressFamily.InterNetworkV6 && rs.Subnet.Afi == 6 ||
+									ipAddress.AddressFamily == AddressFamily.InterNetwork && rs.Subnet.Afi == 4) &&
+									Utils.IsInSubnet(ipAddress, rs.Subnet.Subnet));
+
+									if (matchingRouter == null)
+									{
+										continue;
+									}
+									string status = "Not configured";
+									if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == false)
 									{
 										status = "Pending approval";
 									}
-									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == true)
-									{
-										status = "Rejected";
-									}
-									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == false)
+									else if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_extra_deployed"]) == false)
 									{
 										status = "Pending deployment";
 									}
-									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == true)
+									else if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_extra_deployed"]) == true)
 									{
-										var lan = config.LanMapping[entry.ixlan_id];
-										var matchingRouter = lan.Routers.FirstOrDefault(item => item.IPAddresses.Contains(entry.owneripaddr4));
-										if (matchingRouter != null)
+										try
 										{
-											try{
-                                                var neighboorName = $"peer_AS{asnQuery}_{lan.Name}_ipv4_{Utils.GetNeighborName(entry.ipaddr4)}";
-                                                var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
-                                                var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
-                                                status = Utils.GetInfoValue(birdlgOutput);
-                                            }
-                                            catch (Exception e)
-                                            {
-                                                status = "Deployed";
-                                            }
+											var neighborName = $"peer_AS{asnQuery}_{matchingRouter.Subnet.Name}_ipv{matchingRouter.Subnet.Afi}_{Utils.GetNeighborName(ipAddressStr)}";
+											var hostname = matchingRouter.RouterValue.Hostname;
+											var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighborName);
+											status = Utils.GetInfoValue(birdlgOutput);
 										}
-										else
+										catch (Exception e)
 										{
 											status = "Deployed";
 										}
 									}
+									<tr>
+										<td width="60%">Peer: @luje_rdr["peering_ips_extra_addr"].ToString()<br />Ours: @matchingRouter.Subnet.IPAddress</td>
+										<td width="20%">@status</td>
+										<td width="20%"><a href="/portal/extra?asn=@asnQuery&delete=@luje_rdr["peering_ips_extra_id"].ToString()">delete</a></td>
+									</tr>
 								}
-								luje_rdr.Close();
-							}
-							<tr>
-								<td width="20%">@entry.name</td>
-								<td width="40%">Peer: @entry.ipaddr4<br />Ours: @entry.owneripaddr4</td>
-								<td width="20%">@status</td>
-								<td width="20%">
-									@if (requestable)
-									{
-										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=4">add</a>
-									}else{
-										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=4">delete</a>
-									}
-								</td>
-							</tr>
-						}
-						if (entry.ipaddr6 != null && entry.ipaddr6 != "")
-						{
-							string status = "Not configured";
-							bool requestable = true;
-							if (knownnetwork)
-							{
-								luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 6 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
-								luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
-								luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.id));
-								luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ownerid));
-								luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ixlan_id));
-								luje_cmd.Prepare();
-								luje_rdr = luje_cmd.ExecuteReader();
-
-								if (luje_rdr.Read())
-								{
-									requestable = false;
-									if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == false)
-									{
-										status = "Pending approval";
-									}
-									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == true)
-									{
-										status = "Rejected";
-									}
-									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == false)
-									{
-										status = "Pending deployment";
-									}
-									else if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_deployed"]) == true)
-									{
-										var lan = config.LanMapping[entry.ixlan_id];
-										var matchingRouter = lan.Routers.FirstOrDefault(item => item.IPAddresses.Contains(entry.owneripaddr6));
-										if (matchingRouter != null)
-										{
-											try {
-                                                var neighboorName = $"peer_AS{asnQuery}_{lan.Name}_ipv6_{Utils.GetNeighborName(entry.ipaddr6)}";
-                                                var hostname = config.RouterMapping[matchingRouter.Name].Hostname;
-                                                var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
-                                                status = Utils.GetInfoValue(birdlgOutput);
-                                            }
-                                            catch (Exception e)
-                                            {
-                                                status = "Deployed";
-                                            }
-										}
-										else
-										{
-											status = "Deployed";
-										}
-									}
-								}
-								luje_rdr.Close();
-							}
-							<tr>
-								<td width="20%">@entry.name</td>
-								<td width="40%">Peer: @entry.ipaddr6<br />Ours: @entry.owneripaddr6</td>
-								<td width="20%">@status</td>
-								<td width="20%">
-									@if (requestable)
-									{
-										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=6">add</a>
-									}else{
-										<a href="/portal/action?asn=@asnQuery&lanid=@entry.ixlan_id&addrid=@entry.id&oaddrid=@entry.ownerid&v=6">delete</a>
-									}
-								</td>
-							</tr>
-						}
-					}
-				}
-			</table>
-
-			<h3>Extra IPs</h3>
-			@{
-				luje_cmd = new NpgsqlCommand("select peering_ips_extra_active, peering_ips_extra_deployed, peering_ips_extra_addr, peering_ips_extra_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra_peering_id and peering_deleted = false where peering_peeringdb_id = @peeringdb_id and peering_ips_extra_deleted = false;", luje_conn);
-				luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, Convert.ToInt32(peeringdb_id));
-				luje_cmd.Prepare();
-				luje_rdr = luje_cmd.ExecuteReader();
-			}
-			<form method="post" action="/portal/extra?asn=@asnQuery">
-				<input type="hidden" name="__RequestVerificationToken" value="@Xsrf.GetAndStoreTokens(Model.HttpContext).RequestToken" />
-				<table width="100%">
-					<tr>
-						<td width="60%">IP Address</td>
-						<td width="20%">Status</td>
-						<td width="20%"></td>
-					</tr>
-					<tr>
-						<td width="60%"></td>
-						<td width="20%"></td>
-						<td width="20%"></td>
-					</tr>
-					@while (luje_rdr.Read())
-					{
-						IPAddress ipAddress = IPAddress.Parse(luje_rdr["peering_ips_extra_addr"].ToString());
-						string ipAddressStr = luje_rdr["peering_ips_extra_addr"].ToString();
-
-						var matchingRouter = config.RouterMapping
-							.SelectMany(router => router.Value.ExtraPrefix, (router, subnet) => new { Router = router.Key, RouterValue = router.Value, Subnet = subnet })
-							.FirstOrDefault(rs => 
-								(ipAddress.AddressFamily == AddressFamily.InterNetworkV6 && rs.Subnet.Afi == 6 || 
-								 ipAddress.AddressFamily == AddressFamily.InterNetwork && rs.Subnet.Afi == 4) && 
-								Utils.IsInSubnet(ipAddress, rs.Subnet.Subnet));
-
-						if (matchingRouter == null)
-						{
-							continue;
-						}
-						string status = "Not configured";
-						if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == false)
-						{
-							status = "Pending approval";
-						}
-						else if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_extra_deployed"]) == false)
-						{
-							status = "Pending deployment";
-						}
-						else if (Convert.ToBoolean(luje_rdr["peering_ips_extra_active"]) == true && Convert.ToBoolean(luje_rdr["peering_ips_extra_deployed"]) == true)
-						{
-							try {
-								var neighborName = $"peer_AS{asnQuery}_{matchingRouter.Subnet.Name}_ipv{matchingRouter.Subnet.Afi}_{Utils.GetNeighborName(ipAddressStr)}";
-								var hostname = matchingRouter.RouterValue.Hostname;
-								var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighborName);
-								status = Utils.GetInfoValue(birdlgOutput);
-							}
-							catch (Exception e)
-                            {
-								status = "Deployed";
-							}
-						}
-						<tr>
-							<td width="60%">Peer: @luje_rdr["peering_ips_extra_addr"].ToString()<br />Ours: @matchingRouter.Subnet.IPAddress</td>
-							<td width="20%">@status</td>
-							<td width="20%"><a href="/portal/extra?asn=@asnQuery&delete=@luje_rdr["peering_ips_extra_id"].ToString()">delete</a></td>
-						</tr>
-					}
-					<tr>
-						<td width="60%"><input name="addr" type="text" style="width:100%"/></td>
-						<td width="20%"></td>
-						<td width="20%"><input type="submit" value="add"/></td>
-					</tr>
-				</table>
-			</form>
-
+								<tr>
+									<td width="60%"><input name="addr" type="text" style="width:100%" /></td>
+									<td width="20%"></td>
+									<td width="20%"><input type="submit" value="add" /></td>
+								</tr>
+							</table>
+						</form>
+					</div>
+				</article>
+			</main>
 		</div>
 		luje_conn.Close();
 	}

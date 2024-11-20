@@ -7,31 +7,53 @@
     {
 		NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
 		luje_conn.Open();
-		NpgsqlCommand luje_cmd = new NpgsqlCommand("select peeringdb_network.name, peeringdb_network.asn from peering INNER JOIN peeringdb_network ON peeringdb_network.id = peering_peeringdb_id where peering_active = true and peering_deleted = false order by cast(peering_asn as integer) asc;", luje_conn);
-		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
 
-		<div class="columns nine">
-			<h2>Peers</h2>
-			<p>LUJE.net is connected with the following networks on mutual exchange points:</p>
-			<table width="100%">
-				<tr>
-					<td width="20%">AS Number</td>
-					<td width="80%">Name</td>
-				</tr>
-				<tr>
-					<td width="20%"></td>
-					<td width="80%"></td>
-				</tr>
-				@while (luje_rdr.Read())
-				{
-					string asn = "AS" + luje_rdr["asn"].ToString();
-					string name = luje_rdr["name"].ToString();
-					<tr>
-						<td width="20%">@asn</td>
-						<td width="80%">@name</td>
-					</tr>
-				}
-			</table>
+		NpgsqlCommand luje_cmd = new NpgsqlCommand("select peeringdb_network.name, peeringdb_network.asn, peeringdb_network.website from peering INNER JOIN peeringdb_network ON peeringdb_network.id = peering_peeringdb_id where peering_active = true and peering_deleted = false order by cast(peering_asn as integer) asc;", luje_conn);
+
+		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+		<div class="wrapper post">
+			<main class="page-content" aria-label="Content">
+				<article>
+					<header class="header">
+						<h1 class="header-title">Peers</h1>
+					</header>
+
+					<div class="page-content">
+						<p>LUJE.net is connected with the following networks on mutual exchange points:</p>
+						<table width="100%">
+							<thead>
+								<tr>
+									<td width="20%">AS Number</td>
+									<td width="80%">Name</td>
+								</tr>
+							</thead>
+							@while (luje_rdr.Read())
+
+							{
+								string asnumber = luje_rdr["asn"].ToString();
+								string asn = "AS" + asnumber;
+								string name = luje_rdr["name"].ToString();
+								string website = luje_rdr["website"].ToString();
+								<tr>
+									@*<td width="20%"><a rel="noopener" href="https://www.peeringdb.com/asn/@asnumber" target="_blank">@asn</a></td>
+									<td width="80%">
+										@if (website != "")
+										{
+											<a rel="noopener" href="@website" target="_blank">@name</a>
+										}
+										else
+										{
+											@name
+										}
+									</td>*@
+									<td width="20%">@asn</td>
+									<td width="80%">@name</td>
+								</tr>
+							}
+						</table>
+					</div>
+				</article>
+			</main>
 		</div>
 		luje_rdr.Close();
 		luje_conn.Close();

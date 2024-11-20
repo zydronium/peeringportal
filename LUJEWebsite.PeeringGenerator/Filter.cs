@@ -156,7 +156,7 @@ ORDER BY peeringdb_network.asn ASC;", luje_conn);
 										filterReady[$"{item.Name}4"].Add($"AS{luje_rdr["asn"].ToString()}");
 									}
 
-									string neighboorName = $"peer_ipv4_AS{luje_rdr["asn"].ToString()}_{lan.Name}_{Utils.GetNeighborName(luje_rdr["ipaddr4"].ToString())}";
+									string neighboorName = $"peer_AS{luje_rdr["asn"].ToString()}_{lan.Name}_ipv4_{Utils.GetNeighborName(luje_rdr["ipaddr4"].ToString())}";
 									int? limit = null;
 									if (luje_rdr["info_prefixes4"] != null)
 									{
@@ -209,7 +209,7 @@ ORDER BY peeringdb_network.asn ASC;", luje_conn);
 										filterReady[$"{item.Name}6"].Add($"AS{luje_rdr["asn"].ToString()}");
 									}
 
-									string neighboorName = $"peer_ipv6_AS{luje_rdr["asn"].ToString()}_{lan.Name}_{Utils.GetNeighborName(luje_rdr["ipaddr6"].ToString())}";
+									string neighboorName = $"peer_AS{luje_rdr["asn"].ToString()}_{lan.Name}_ipv6_{Utils.GetNeighborName(luje_rdr["ipaddr6"].ToString())}";
 									int? limit = null;
 									if (luje_rdr["info_prefixes6"] != null)
 									{
@@ -277,7 +277,7 @@ where peering.peering_peeringdb_id = @peer and peering_ips_extra_active = true a
 										filterReady[$"{router.Key}4"].Add($"AS{luje_rdr["asn"].ToString()}");
 									}
 
-									string neighboorName = $"peer_ipv4_AS{luje_rdr["asn"].ToString()}_{subnet.Name}_{Utils.GetNeighborName(luje_rdr["peering_ips_extra_addr"].ToString())}";
+									string neighboorName = $"peer_AS{luje_rdr["asn"].ToString()}_{subnet.Name}_ipv4_{Utils.GetNeighborName(luje_rdr["peering_ips_extra_addr"].ToString())}";
 									int? limit = null;
 									if (luje_rdr["info_prefixes4"] != null)
 									{
@@ -320,7 +320,7 @@ where peering.peering_peeringdb_id = @peer and peering_ips_extra_active = true a
 										filterReady[$"{router.Key}6"].Add($"AS{luje_rdr["asn"].ToString()}");
 									}
 
-									string neighboorName = $"peer_ipv6_AS{luje_rdr["asn"].ToString()}_{subnet.Name}_{Utils.GetNeighborName(luje_rdr["peering_ips_extra_addr"].ToString())}";
+									string neighboorName = $"peer_AS{luje_rdr["asn"].ToString()}_{subnet.Name}_ipv6_{Utils.GetNeighborName(luje_rdr["peering_ips_extra_addr"].ToString())}";
 									int? limit = null;
 									if (luje_rdr["info_prefixes6"] != null)
 									{
@@ -377,7 +377,7 @@ where peering.peering_peeringdb_id = @peer and peering_ips_extra_active = true a
 				processStartInfo = new ProcessStartInfo
 				{
 					FileName = "ssh",
-					Arguments = $"root@{router.Value.Hostname} \"chown -R bird:bird /etc/bird; /usr/sbin/birdc configure; /usr/local/bin/birdc6 configure\"",
+					Arguments = $"root@{router.Value.Hostname} \"chown -R bird:bird /etc/bird; /usr/sbin/birdc configure\"",
 					RedirectStandardOutput = true,
 					UseShellExecute = false
 				};
@@ -401,19 +401,19 @@ prefix set AUTOFILTER_{ASN}_IPv{afi};
         reject;
     }}
 
-    if ( is_luje_more_specific() ) then {{
+    if ( is_luje_more_specific_ipv{afi}() ) then {{
         #print ""Reject: 212855 more specific: "", net, "" "", bgp_path, "" filter: peer_in_{ASN}_ipv{afi}"";
         bgp_large_community.add((212855, rejected_route, r_luje_morespecific));
         reject;
     }}
 	
-    if ( is_bogon() ) then {{
+    if ( is_bogon_ipv{afi}() ) then {{
         #print ""Reject: bogon: "", net, "" "", bgp_path, "" filter: peer_in_AS{ASN}_ipv{afi}"";
         bgp_large_community.add((212855, rejected_route, r_bogon_prefix));
         reject;
     }}
 
-    if ! is_acceptable_size() then {{
+    if ! is_acceptable_size_ipv{afi}() then {{
         #print ""Reject: too large or too small: "", net, "" "", bgp_path, "" filter: peer_in_AS{ASN}_ipv{afi}"";
         bgp_large_community.add((212855, rejected_route, r_unacceptable_pfxlen));
         reject;
@@ -516,7 +516,7 @@ prefix set AUTOFILTER_{ASN}_IPv{afi};
 			else
 			{
 				sessionBuilder.Append($@"        #export where ebgp_peering_export({ASN});
-        export filter ebgp_export;").AppendLine();
+        export filter ebgp_export_ipv{afi};").AppendLine();
 			}
 
 			sessionBuilder.Append($@"    }};").AppendLine();

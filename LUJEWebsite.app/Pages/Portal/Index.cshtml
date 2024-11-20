@@ -21,11 +21,20 @@
 
 @if(!loggedin)
 {
-	<div class="columns nine">
-		<h2>Peering Portal</h2>
-		<p>You can request peering with LUJE.net via the Peering Portal.</p>
-		<p>Simply login with your PeeringDB account and the Peering Portal will tell you at which internet exchange you can establish sessions and configure it automatically.</p>
-		<p><a href="/portal/login">Login with PeeringDB<br /><img src="~/assets/pdb-logo-coloured.png" /></a></p>
+	<div class="wrapper post">
+		<main class="page-content" aria-label="Content">
+			<article>
+				<header class="header">
+					<h1 class="header-title">Peering Portal</h1>
+				</header>
+
+				<div class="page-content">
+					<p>You can request peering with LUJE.net via the Peering Portal.</p>
+					<p>Simply login with your PeeringDB account and the Peering Portal will tell you at which internet exchange you can establish sessions and configure it automatically.</p>
+					<p><a href="/portal/login">Login with PeeringDB<br /><img src="~/assets/pdb-logo-coloured.png" /></a></p>
+				</div>
+			</article>
+		</main>
 	</div>
 }
 else
@@ -33,19 +42,34 @@ else
 	try
 	{
 		Profile profile = HttpContext.Session.Get<Profile>("profile");
+		<div class="wrapper post">
+			<main class="page-content" aria-label="Content">
+				<article>
+					<header class="header">
+						<h1 class="header-title">Peering Portal</h1>
+					</header>
 
-		<div class="columns nine">
-			<h2>Peering Portal</h2>
-			<p>@if (admin) {<span><a href="/portal/admin">Admin</a> -  </span>}<a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
-			<p>Welcome @profile.given_name.</p>
-			<p>Pick a network:</p>
-			<ul>
-				@foreach (Network network in profile.networks)
-				{
-					string asn = "AS" + network.asn;
-					<li>- <a href="/portal/network?asn=@network.asn">@network.name (@asn)</a></li>
-				}
-			</ul>
+					<div class="page-content">
+						<p>
+							@if (admin)
+							{
+								<span><a href="/portal/admin">Admin</a> -  </span>
+							}
+							<a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a>
+						</p>
+						<p>Welcome @profile.given_name.</p>
+						<p>Pick a network:</p>
+						<ul>
+							@foreach (Network network in profile.networks)
+							{
+
+								string asn = "AS" + network.asn;
+								<li><a href="/portal/network?asn=@network.asn">@network.name (@asn)</a></li>
+							}
+						</ul>
+					</div>
+				</article>
+			</main>
 		</div>
 	}
     catch (HttpRequestException e)

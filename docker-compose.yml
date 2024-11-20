@@ -23,6 +23,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./keys:/keys
+      - ./peeringconfig.json:/app/peeringconfig.json
     environment:
       DATABASE_SERVER: db
       DATABASE_USER: luje
@@ -71,6 +72,7 @@ services:
       - ./routefilters:/opt/routefilters
       - ./ssh:/root/.ssh
       - ./peeringconfig.json:/app/peeringconfig.json
+      - ./ripeauth.pfx:/app/ripeauth.pfx
     depends_on:
       - db
   ofelia:

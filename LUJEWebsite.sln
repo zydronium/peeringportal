@@ -14,6 +14,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PeeringDB-Sync", "PeeringDB
 		PeeringDB-Sync\Dockerfile = PeeringDB-Sync\Dockerfile
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RPKI-Client", "RPKI-Client", "{B2B13C40-5893-44A1-A01A-5DFFA8CD2B84}"
+	ProjectSection(SolutionItems) = preProject
+		RPKI-Client\Dockerfile = RPKI-Client\Dockerfile
+		RPKI-Client\run.sh = RPKI-Client\run.sh
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

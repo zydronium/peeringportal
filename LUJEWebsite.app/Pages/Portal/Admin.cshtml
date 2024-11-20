@@ -43,17 +43,26 @@ else
 		}
 		luje_rdr.Close();
 
-		<div class="columns nine">
-			<h2>Peering Admin</h2>
-			<p><a href="/portal/admin">Admin</a> - <a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
-			<h3>Approvals</h3>
-			<p>There are @countApproval <a href="/portal/approvals">pending approvals</a></p>
-			<h3>Manual action</h3>
-			<form method="get" action="/portal/manual">
-				<label for="asn">ASN</label>
-				<input name="asn" type="number"/><br>
-				<input type="submit" value="select"/>
-			</form>
+		<div class="wrapper post">
+			<main class="page-content" aria-label="Content">
+				<article>
+					<header class="header">
+						<h1 class="header-title">Peering Admin</h1>
+					</header>
+
+					<div class="page-content">
+						<p><a href="/portal/admin">Admin</a> - <a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a></p>
+						<h3>Approvals</h3>
+						<p>There are @countApproval <a href="/portal/approvals">pending approvals</a></p>
+						<h3>Manual action</h3>
+						<form method="get" action="/portal/manual">
+							<label for="asn">ASN</label>
+							<input name="asn" type="number" /><br>
+							<input type="submit" value="select" />
+						</form>
+					</div>
+				</article>
+			</main>
 		</div>
 		luje_conn.Close();
 	}

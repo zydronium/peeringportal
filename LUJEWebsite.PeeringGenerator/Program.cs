@@ -9,11 +9,11 @@ namespace LUJEWebsite.PeeringGenerator
         static async Task Main(string[] args)
         {
             string configFile = File.ReadAllText("peeringconfig.json");
-			Config config = JsonConvert.DeserializeObject<Config>(configFile);
+            Config config = JsonConvert.DeserializeObject<Config>(configFile);
 
 			Console.WriteLine("Running a filter batch");
             Filter.Run(config);
-			Console.WriteLine("Running a ASN batch");
+            Console.WriteLine("Running a ASN batch");
 			await ASNObjectGenerator.RunAsync();
 			Console.WriteLine("Finished");
 		}

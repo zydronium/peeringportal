@@ -43,33 +43,41 @@
 	}
 }
 
-<div class="columns nine">
-	<h2>Welcome to LUJE.net - AS212855</h2>
+<div class="wrapper post">
+	<main class="page-content" aria-label="Content">
+		<article>
+			<header class="header">
+				<h1 class="header-title">Welcome to LUJE.net - AS212855</h1>
+			</header>
 
-	<p>Connected internet exchanges:</p>
-	<ul>
-		@foreach(dynamic ix in ixList)
-		{
-			if (string.IsNullOrEmpty(ix.name_long))
-			{
-				<li>- @ix.name</li>
-			}
-			else
-			{
-				<li>- @ix.name - @ix.name_long</li>
-			}
-		}
-	</ul>
-	<p>Facilities:</p>
-	<ul>
-		@foreach (dynamic fac in facList)
-		{
-			<li>- @fac.name</li>
-		}
-	</ul>
-	<p>Prefixes originating from AS212855:</p>
-	<ul>
-		<li>- 185.36.229.0/24</li>
-		<li>- 2a07:cd40::/29</li>
-	</ul>
+			<div class="page-content">
+				<p>Connected internet exchanges:</p>
+				<ul>
+					@foreach (dynamic ix in ixList)
+					{
+						if (string.IsNullOrEmpty(ix.name_long))
+						{
+							<li>@ix.name</li>
+						}
+						else
+						{
+							<li>@ix.name - @ix.name_long</li>
+						}
+					}
+				</ul>
+				<p>Facilities:</p>
+				<ul>
+					@foreach (dynamic fac in facList)
+					{
+						<li>@fac.name</li>
+					}
+				</ul>
+				<p>Prefixes originating from AS212855:</p>
+				<ul>
+					<li>93.157.140.0/24</li>
+					<li>2001:67c:f8c::/48</li>
+				</ul>
+			</div>
+		</article>
+	</main>
 </div>
