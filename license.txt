@@ -1,4 +1,4 @@
-Copyright (c) 2023 Jelle Luteijn - AS212855
+Copyright (c) 2025 Jelle Luteijn - AS212855
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -9,9 +9,6 @@ furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-
-If you like the Software and we are on a common internet exchange, lets peer!
-Thanks for peering.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
