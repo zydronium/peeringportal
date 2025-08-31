@@ -1,0 +1,70 @@
+﻿@page
+@using LUJEWebsite.Library.Utils;
+@using Newtonsoft.Json
+@using MySql.Data.MySqlClient;
+@using LUJEWebsite.Library.Models;
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@{
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+}
+
+@try
+{
+	MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+	await luje_conn.OpenAsync();
+
+	MySqlCommand luje_cmd = new MySqlCommand("select downstream_id, downstream_name, downstream_asn, downstream_public from downstream where downstream_deleted = false order by downstream_id;", luje_conn);
+	MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+	<div class="wrapper post">
+		<main class="page-content" aria-label="Content">
+			<article>
+				<header class="header">
+					<h1 class="header-title">Downstream Admin</h1>
+				</header>
+
+				<div class="page-content">
+					<form method="post" action="./downstream_manage">
+						<input type="hidden" name="__RequestVerificationToken" value="@Xsrf.GetAndStoreTokens(Model.HttpContext).RequestToken" />
+						<table width="100%">
+							<tr>
+								<td width="60%">Name</td>
+								<td width="15%">ASN</td>
+								<td width="10%">Public</td>
+								<td width="15%"></td>
+							</tr>
+							<tr>
+								<td width="60%"></td>
+								<td width="20%"></td>
+								<td width="20%"></td>
+							</tr>
+							@while (luje_rdr.Read())
+							{
+								<tr>
+									<td width="60%"><a href="./downstream_network?id=@luje_rdr["downstream_id"].ToString()">@luje_rdr["downstream_name"].ToString()</a></td>
+									<td width="15%">@luje_rdr["downstream_asn"].ToString()</td>
+									<td width="15%">@if (Convert.ToBoolean(luje_rdr["downstream_public"])) { <span>Yes</span> } else { <span>No</span> }</td>
+									<td width="15%"><a onclick="if(confirm('Are you sure you want to delete the downstream')){document.location.href='./downstream_manage?delete=@luje_rdr["downstream_id"].ToString()';}" href="#">Delete</a></td>
+								</tr>
+							}
+							<tr>
+								<td width="60%"><input name="name" type="text" style="width:100%" /></td>
+								<td width="15%"><input name="asn" type="number" style="width:100%" /></td>
+								<td width="15%"><input name="public" type="checkbox" value="1" /></td>
+								<td width="15%"><input type="submit" value="Add" /></td>
+							</tr>
+						</table>
+					</form>
+				</div>
+			</article>
+		</main>
+	</div>
+	await luje_rdr.CloseAsync();
+	await luje_conn.CloseAsync();
+}
+catch (HttpRequestException e)
+{
+	Console.WriteLine("\nException Caught!");
+	Console.WriteLine("Message :{0} ", e.Message);
+}

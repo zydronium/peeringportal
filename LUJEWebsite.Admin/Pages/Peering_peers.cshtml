@@ -1,0 +1,63 @@
+﻿@page
+@using MySql.Data.MySqlClient;
+@using LUJEWebsite.Library.Utils;
+@{
+	ViewData["Title"] = "Peering Portal";
+	try	
+	{
+		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		await luje_conn.OpenAsync();
+
+		string ixlan = Request.Query["ixlan"];
+		MySqlCommand luje_cmd;
+		if (string.IsNullOrEmpty(ixlan))
+        {
+			luje_cmd = new MySqlCommand("select distinct peeringdb_network.name, peeringdb_network.asn, peeringdb_network.website from peering INNER JOIN peeringdb_network ON peeringdb_network.id = peering_peeringdb_id where peering_active = true and peering_deleted = false order by cast(peeringdb_network.asn as integer) asc;", luje_conn);
+        }else{
+			luje_cmd = new MySqlCommand("select distinct peeringdb_network.name, peeringdb_network.asn, peeringdb_network.website from peering INNER JOIN peeringdb_network ON peeringdb_network.id = peering_peeringdb_id INNER JOIN peeringdb_network_ixlan ON peeringdb_network.id = peeringdb_network_ixlan.net_id AND peeringdb_network_ixlan.ixlan_id = @ixlan inner join peering_ips on peering_ips_peeringdb_addrid = peeringdb_network_ixlan.id and peering_ips.peering_ips_deleted = false where peering_active = true and peering_deleted = false order by cast(peeringdb_network.asn as integer) asc;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@ixlan", Convert.ToInt32(ixlan));
+			await luje_cmd.PrepareAsync();
+		}
+
+		MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+		<div class="wrapper post">
+			<main class="page-content" aria-label="Content">
+				<article>
+					<header class="header">
+						<h1 class="header-title">Peering Admin</h1>
+					</header>
+
+					<div class="page-content">
+						<table width="100%">
+							<thead>
+								<tr>
+									<td width="20%">AS Number</td>
+									<td width="80%">Name</td>
+								</tr>
+							</thead>
+							@while (luje_rdr.Read())
+
+							{
+								string asnumber = luje_rdr["asn"].ToString();
+								string asn = "AS" + asnumber;
+								string name = luje_rdr["name"].ToString();
+								string website = luje_rdr["website"].ToString();
+								<tr>
+									<td width="20%"><a href="./peering_network?asn=@asnumber">@asn</a></td>
+									<td width="80%">@name</td>
+								</tr>
+							}
+						</table>
+					</div>
+				</article>
+			</main>
+		</div>
+		await luje_rdr.CloseAsync();
+		await luje_conn.CloseAsync();
+	}
+    catch(HttpRequestException e)
+    {
+        Console.WriteLine("\nException Caught!");	
+        Console.WriteLine("Message :{0} ",e.Message);
+    }
+}

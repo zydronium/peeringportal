@@ -1,0 +1,97 @@
+﻿@page
+@using MySql.Data.MySqlClient;
+@using System.Collections;
+@using LUJEWebsite.Library.Utils;
+@{
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+	bool loggedin = false;
+	bool admin = false;
+	string accessToken = "";
+}
+
+@try
+{
+	MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+	await luje_conn.OpenAsync();
+
+	string downstream_id = HttpContext.Request.Query["id"];
+	string downstream_prefixes_id = HttpContext.Request.Query["delete"];
+	MySqlCommand luje_cmd = new MySqlCommand("select downstream_id, downstream_name, downstream_asn from downstream where downstream_id = @downstream_id and downstream_deleted = false;", luje_conn);
+	luje_cmd.Parameters.AddWithValue("@downstream_id", Convert.ToInt32(downstream_id));
+	await luje_cmd.PrepareAsync();
+	MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+	if (!await luje_rdr.ReadAsync())
+	{
+		await luje_rdr.CloseAsync();
+		Response.Redirect("./downstream");
+		await luje_conn.CloseAsync();
+		return;
+	}
+	else
+	{
+		await luje_rdr.CloseAsync();
+
+		if (Request.HasFormContentType && Request.Form != null && Request.Form.Keys.Count > 0)
+		{
+			string prefix = Request.Form["prefix"].FirstOrDefault().Trim();
+			bool globalPrefix = false;
+			var globalPrefixString = Request.Form["global"].FirstOrDefault();
+			if (globalPrefixString == "1")
+			{
+				globalPrefix = true;
+			}
+			else
+			{
+				globalPrefix = false;
+			}
+
+			if (prefix != "" )
+			{
+				int type = Utils.GetAddressFamilyFromPrefix(prefix);
+
+				luje_cmd = new MySqlCommand("insert into downstream_prefixes (downstream_prefixes_addr, downstream_prefixes_type, downstream_prefixes_global, downstream_prefixes_downstream_id, downstream_prefixes_created, downstream_prefixes_modified, downstream_prefixes_deleted) values(@prefix, @type, @global, @downstream_id, NOW(), NOW(), false);", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@prefix", prefix);
+				luje_cmd.Parameters.AddWithValue("@type", Convert.ToInt32(type));
+				luje_cmd.Parameters.AddWithValue("@global", globalPrefix);
+				luje_cmd.Parameters.AddWithValue("@downstream_id", Convert.ToInt32(downstream_id));
+				await luje_cmd.PrepareAsync();
+				await luje_cmd.ExecuteNonQueryAsync();
+
+			}
+
+		}
+		else if (downstream_id != "" && downstream_prefixes_id != "")
+		{
+			luje_cmd = new MySqlCommand("select downstream_prefixes_id from downstream_prefixes where downstream_prefixes_id = @downstream_prefixes_id and downstream_prefixes_downstream_id = @downstream_id and downstream_prefixes_deleted = false;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@downstream_prefixes_id", Convert.ToInt32(downstream_prefixes_id));
+			luje_cmd.Parameters.AddWithValue("@downstream_id", Convert.ToInt32(downstream_id));
+			await luje_cmd.PrepareAsync();
+			luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+			if (await luje_rdr.ReadAsync())
+			{
+				await luje_rdr.CloseAsync();
+				luje_cmd = new MySqlCommand("update downstream_prefixes set downstream_prefixes_deleted = true, downstream_prefixes_modified = NOW() where downstream_prefixes_id = @downstream_prefixes_id and downstream_prefixes_downstream_id = @downstream_id and downstream_prefixes_deleted = false;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@downstream_prefixes_id", Convert.ToInt32(downstream_prefixes_id));
+				luje_cmd.Parameters.AddWithValue("@downstream_id", Convert.ToInt32(downstream_id));
+				await luje_cmd.PrepareAsync();
+				await luje_cmd.ExecuteNonQueryAsync();
+			}
+			else
+			{
+				await luje_rdr.CloseAsync();
+			}
+		}
+
+		Response.Redirect("./downstream_network?id=" + downstream_id);
+		await luje_conn.CloseAsync();
+		return;
+	}
+}
+catch (HttpRequestException e)
+{
+	Console.WriteLine("\nException Caught!");
+	Console.WriteLine("Message :{0} ", e.Message);
+}

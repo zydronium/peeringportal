@@ -1,64 +1,63 @@
 ﻿@page
+@using LUJEWebsite.Library.Utils
 @using Newtonsoft.Json.Linq;
 @using LUJEWebsite.app.Extentions;
-@using LUJEWebsite.app.Model;
-@using Npgsql;
-@using NpgsqlTypes;
+@using LUJEWebsite.Library.Models;
+@using MySql.Data.MySqlClient;
 @using System.Collections;
-@using LUJEWebsite.app.Utils;
 @using Newtonsoft.Json;
 @using System.Net;
 @using System.Net.Sockets;
 
 @{
-	string configFile = System.IO.File.ReadAllText("peeringconfig.json");
-	Config config = JsonConvert.DeserializeObject<Config>(configFile);
+    string configFile = await System.IO.File.ReadAllTextAsync("peeringconfig.json");
+    Config config = JsonConvert.DeserializeObject<Config>(configFile);
 
-	HttpClient client = new HttpClient();
-	ViewData["Title"] = "Peering Portal";
-	bool loggedin = false;
-	bool admin = false;
-	string accessToken = "";
-	Network selectedNetwork = null;
-	if (HttpContext.Session.Get<Boolean>("loggedin") != null && HttpContext.Session.Get<Boolean>("loggedin") == true)
-	{
-		string asn = Request.Query["asn"];
-		if (asn != "")
-		{
-			Profile profile = HttpContext.Session.Get<Profile>("profile");
-			foreach (Network network in profile.networks)
-			{
-				if(network.asn.ToString() == asn)
-				{
-					selectedNetwork = network;
-					loggedin = true;
-				}
-			}
-		}
-	}
-	if (HttpContext.Session.Get<Boolean>("admin") != null && HttpContext.Session.Get<Boolean>("admin") == true)
-	{
-		admin = true;
-	}
+    HttpClient client = new HttpClient();
+    ViewData["Title"] = "Peering Portal";
+    bool loggedin = false;
+    bool admin = false;
+    string accessToken = "";
+    Network selectedNetwork = null;
+    if (HttpContext.Session.Get<Boolean>("loggedin") != null && HttpContext.Session.Get<Boolean>("loggedin") == true)
+    {
+        string asn = Request.Query["asn"];
+        if (asn != "")
+        {
+            Profile profile = HttpContext.Session.Get<Profile>("profile");
+            foreach (Network network in profile.networks)
+            {
+                if(network.asn.ToString() == asn)
+                {
+                    selectedNetwork = network;
+                    loggedin = true;
+                }
+            }
+        }
+    }
+    if (HttpContext.Session.Get<Boolean>("admin") != null && HttpContext.Session.Get<Boolean>("admin") == true)
+    {
+        admin = true;
+    }
 }
 
 @if (!loggedin)
 {
-	Response.Redirect("/portal/");
+    Response.Redirect("/portal/");
 }
 else
 {
-	try
-	{
-		Profile profile = HttpContext.Session.Get<Profile>("profile");
-		string asn = "AS" + selectedNetwork.asn;
-		NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
-		luje_conn.Open();
+    try
+    {
+        Profile profile = HttpContext.Session.Get<Profile>("profile");
+        string asn = "AS" + selectedNetwork.asn;
+        MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+        await luje_conn.OpenAsync();
 
-		NpgsqlCommand luje_cmd = new NpgsqlCommand("select peeringdb_network_ixlan.ixlan_id from peeringdb_network_ixlan where asn = @portalowner;", luje_conn);
-		luje_cmd.Parameters.AddWithValue("@portalowner", NpgsqlDbType.Integer, Convert.ToInt32(Configuration.PortalOwnerAsn));
-		luje_cmd.Prepare();
-		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+        MySqlCommand luje_cmd = new MySqlCommand("select peeringdb_network_ixlan.ixlan_id from peeringdb_network_ixlan where asn = @portalowner;", luje_conn);
+        luje_cmd.Parameters.AddWithValue("@portalowner", Convert.ToInt32(Configuration.PortalOwnerAsn));
+        await luje_cmd.PrepareAsync();
+		MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
 		var ixlanlist = new ArrayList();
 		while (luje_rdr.Read())
 		{
@@ -67,34 +66,35 @@ else
 				ixlanlist.Add(luje_rdr["ixlan_id"].ToString());
 			}
 		}
-		luje_rdr.Close();
+		await luje_rdr.CloseAsync();
 
-		luje_cmd = new NpgsqlCommand("select peering_active, peering_deployed from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = false;", luje_conn);
-		luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, selectedNetwork.id);
-		luje_cmd.Prepare();
-		luje_rdr = luje_cmd.ExecuteReader();
+		luje_cmd = new MySqlCommand("select peering_active, peering_deployed from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = false;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@peeringdb_id", selectedNetwork.id);
+		await luje_cmd.PrepareAsync();
+		luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
 
 		bool knownnetwork = false;
 		if (luje_rdr.Read())
 		{
 			knownnetwork = true;
 		}
-		luje_rdr.Close();
+		await luje_rdr.CloseAsync();
 
-		luje_cmd = new NpgsqlCommand(@"select peeringdb_network_ixlan.id, peeringdb_ix.name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, owner_peeringdb_network_ixlan.id as ownerid, owner_peeringdb_network_ixlan.ipaddr4 as owneripaddr4, owner_peeringdb_network_ixlan.ipaddr6 as owneripaddr6
+		luje_cmd = new MySqlCommand(@"select peeringdb_network_ixlan.id, peeringdb_ix.name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, owner_peeringdb_network_ixlan.id as ownerid, owner_peeringdb_network_ixlan.ipaddr4 as owneripaddr4, owner_peeringdb_network_ixlan.ipaddr6 as owneripaddr6
 from peeringdb_network_ixlan
-inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id
-inner join peeringdb_network_ixlan as owner_peeringdb_network_ixlan on peeringdb_ixlan.id = owner_peeringdb_network_ixlan.ixlan_id and owner_peeringdb_network_ixlan.asn = @ownerasn
+inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id and peeringdb_network_ixlan.status = 'ok'
+inner join peeringdb_network_ixlan as owner_peeringdb_network_ixlan on peeringdb_ixlan.id = owner_peeringdb_network_ixlan.ixlan_id and owner_peeringdb_network_ixlan.asn = @ownerasn and owner_peeringdb_network_ixlan.status = 'ok'
 inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id
-where peeringdb_network_ixlan.asn = @asn;", luje_conn);
-		luje_cmd.Parameters.AddWithValue("@ownerasn", NpgsqlDbType.Integer, Convert.ToInt32(Configuration.PortalOwnerAsn));
-		luje_cmd.Parameters.AddWithValue("@asn", NpgsqlDbType.Integer, selectedNetwork.asn);
-		luje_cmd.Prepare();
-		luje_rdr = luje_cmd.ExecuteReader();
+where peeringdb_network_ixlan.asn = @asn
+order by peeringdb_network_ixlan.ixlan_id asc, peeringdb_network_ixlan.id asc;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@ownerasn", Convert.ToInt32(Configuration.PortalOwnerAsn));
+		luje_cmd.Parameters.AddWithValue("@asn", selectedNetwork.asn);
+		await luje_cmd.PrepareAsync();
+		luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
 
 		var networkList = new List<NetworkEntry>();
 
-		while (luje_rdr.Read())
+		while (await luje_rdr.ReadAsync())
 		{
 			NetworkEntry entry = new NetworkEntry
 						{
@@ -110,7 +110,7 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 						};
 			networkList.Add(entry);
 		}
-		luje_rdr.Close();
+		await luje_rdr.CloseAsync();
 
 		<div class="wrapper post">
 			<main class="page-content" aria-label="Content">
@@ -120,10 +120,7 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 					</header>
 
 					<div class="page-content">
-						<p>@if (admin)
-							{
-								<span><a href="/portal/admin">Admin</a> -  </span>
-							}<a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a> - <a href="/portal/network?asn=@selectedNetwork.asn">@selectedNetwork.name (@asn)</a></p>
+						<p><a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a> - <a href="/portal/network?asn=@selectedNetwork.asn">@selectedNetwork.name (@asn)</a></p>
 
 						<table width="100%">
 							<thead>
@@ -144,15 +141,15 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 										bool requestable = true;
 										if (knownnetwork)
 										{
-											luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 4 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
-											luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, selectedNetwork.id);
-											luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.id));
-											luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ownerid));
-											luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ixlan_id));
-											luje_cmd.Prepare();
+											luje_cmd = new MySqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 4 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
+											luje_cmd.Parameters.AddWithValue("@peeringdb_id", selectedNetwork.id);
+											luje_cmd.Parameters.AddWithValue("@addrid", Convert.ToInt32(entry.id));
+											luje_cmd.Parameters.AddWithValue("@oaddrid", Convert.ToInt32(entry.ownerid));
+											luje_cmd.Parameters.AddWithValue("@lanid", Convert.ToInt32(entry.ixlan_id));
+											await luje_cmd.PrepareAsync();
 											luje_rdr = luje_cmd.ExecuteReader();
 
-											if (luje_rdr.Read())
+											if (await luje_rdr.ReadAsync())
 											{
 												requestable = false;
 												if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == false)
@@ -191,7 +188,7 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 													}
 												}
 											}
-											luje_rdr.Close();
+											await luje_rdr.CloseAsync();
 										}
 										<tr>
 											<td width="20%">@entry.name</td>
@@ -207,19 +204,23 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 									}
 									if (entry.ipaddr6 != null && entry.ipaddr6.ToString() != "")
 									{
+										if (entry.owneripaddr6.ToString() == "")
+										{
+                                            continue;
+                                        }
 										string status = "Not configured";
 										bool requestable = true;
 										if (knownnetwork)
 										{
-											luje_cmd = new NpgsqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 6 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
-											luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, selectedNetwork.id);
-											luje_cmd.Parameters.AddWithValue("@addrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.id));
-											luje_cmd.Parameters.AddWithValue("@oaddrid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ownerid));
-											luje_cmd.Parameters.AddWithValue("@lanid", NpgsqlDbType.Integer, Convert.ToInt32(entry.ixlan_id));
-											luje_cmd.Prepare();
-											luje_rdr = luje_cmd.ExecuteReader();
+											luje_cmd = new MySqlCommand("select peering_ips_active, peering_ips_rejected, peering_ips_deployed from peering_ips inner join peering on peering.peering_id = peering_ips_peering_id and peering_deleted = false where peering_ips_peeringdb_lanid = @lanid and peering_ips_peeringdb_addrid = @addrid and peering_ips_peeringdb_oaddrid = @oaddrid and peering_ips_type = 6 and peering_peeringdb_id = @peeringdb_id and peering_ips_deleted = false;", luje_conn);
+											luje_cmd.Parameters.AddWithValue("@peeringdb_id", selectedNetwork.id);
+											luje_cmd.Parameters.AddWithValue("@addrid", Convert.ToInt32(entry.id));
+											luje_cmd.Parameters.AddWithValue("@oaddrid", Convert.ToInt32(entry.ownerid));
+											luje_cmd.Parameters.AddWithValue("@lanid", Convert.ToInt32(entry.ixlan_id));
+											await luje_cmd.PrepareAsync();
+											luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
 
-											if (luje_rdr.Read())
+											if (await luje_rdr.ReadAsync())
 											{
 												requestable = false;
 												if (Convert.ToBoolean(luje_rdr["peering_ips_active"]) == false && Convert.ToBoolean(luje_rdr["peering_ips_rejected"]) == false)
@@ -258,7 +259,7 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 													}
 												}
 											}
-											luje_rdr.Close();
+											await luje_rdr.CloseAsync();
 										}
 										<tr>
 											<td width="20%">@entry.name</td>
@@ -277,10 +278,10 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 						</table>
 
 						@{
-							luje_cmd = new NpgsqlCommand("select peering_ips_extra_active, peering_ips_extra_deployed, peering_ips_extra_addr, peering_ips_extra_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra_peering_id and peering_deleted = false where peering_peeringdb_id = @peeringdb_id and peering_ips_extra_deleted = false;", luje_conn);
-							luje_cmd.Parameters.AddWithValue("@peeringdb_id", NpgsqlDbType.Integer, selectedNetwork.id);
-							luje_cmd.Prepare();
-							luje_rdr = luje_cmd.ExecuteReader();
+							luje_cmd = new MySqlCommand("select peering_ips_extra_active, peering_ips_extra_deployed, peering_ips_extra_addr, peering_ips_extra_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra_peering_id and peering_deleted = false where peering_peeringdb_id = @peeringdb_id and peering_ips_extra_deleted = false;", luje_conn);
+							luje_cmd.Parameters.AddWithValue("@peeringdb_id", selectedNetwork.id);
+							await luje_cmd.PrepareAsync();
+							luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
 						}
 						@if (luje_rdr.HasRows)
 						{
@@ -344,8 +345,8 @@ where peeringdb_network_ixlan.asn = @asn;", luje_conn);
 				</article>
 			</main>
 		</div>
-		luje_rdr.Close();
-		luje_conn.Close();
+		await luje_rdr.CloseAsync();
+		await luje_conn.CloseAsync();
 	}
 	catch (HttpRequestException e)
 	{

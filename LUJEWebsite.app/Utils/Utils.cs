@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace LUJEWebsite.app.Utils
+namespace LUJEWebsite.app.Utils2
 {
 	internal class Utils
 	{

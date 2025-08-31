@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="content-type" content="text/html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title itemprop="name">@ViewData["Title"] - LUJE.net</title>
+
+    <link href="./assets/style.min.e390ba7da26222f4dc42a349955d76dbbe44e5ce2535a43de5a70633a0a9ec3c.css" rel="stylesheet">
+
+
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
+    <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg">
+    <link rel="shortcut icon" href="./assets/favicon.ico">
+
+    <link rel="icon" type="image/svg+xml" href="./assets/icons/favicon.svg">
+
+</head>
+<body data-theme="" class="notransition">
+
+
+    <div class="navbar" role="navigation">
+        <nav class="menu" aria-label="Main Navigation">
+            <input type="checkbox" id="menu-trigger" class="menu-trigger" />
+            <label for="menu-trigger">
+                <span class="menu-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" stroke="currentColor" fill="none" viewBox="0 0 14 14"><title>Menu</title><path stroke-linecap="round" stroke-linejoin="round" d="M10.595 7L3.40726 7"></path><path stroke-linecap="round" stroke-linejoin="round" d="M10.5096 3.51488L3.49301 3.51488"></path><path stroke-linecap="round" stroke-linejoin="round" d="M10.5096 10.4851H3.49301"></path><path stroke-linecap="round" stroke-linejoin="round" d="M0.5 12.5V1.5C0.5 0.947715 0.947715 0.5 1.5 0.5H12.5C13.0523 0.5 13.5 0.947715 13.5 1.5V12.5C13.5 13.0523 13.0523 13.5 12.5 13.5H1.5C0.947715 13.5 0.5 13.0523 0.5 12.5Z"></path></svg>
+                </span>
+            </label>
+
+            <div class="trigger">
+                <ul class="trigger-container">
+                    <li><a class="menu-link" href="./">Peering</a></li>
+                    <li><a class="menu-link" href="./upstream">Upstream</a></li>
+                    <li><a class="menu-link" href="./downstream">Downstream</a></li>
+                    <li><a class="menu-link" href="./probe">Probe</a></li>
+
+                    <li class="menu-separator">
+                        <span>|</span>
+                    </li>
+
+
+                </ul>
+                <a id="mode" href="#">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mode-sunny" width="21" height="21" viewBox="0 0 14 14" stroke-width="1">
+                        <title>LIGHT</title>
+                        <g><circle cx="7" cy="7" r="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></circle><line x1="7" y1="0.5" x2="7" y2="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="2.4" y1="2.4" x2="3.82" y2="3.82" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="0.5" y1="7" x2="2.5" y2="7" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="2.4" y1="11.6" x2="3.82" y2="10.18" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="7" y1="13.5" x2="7" y2="11.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="11.6" y1="11.6" x2="10.18" y2="10.18" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="13.5" y1="7" x2="11.5" y2="7" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="11.6" y1="2.4" x2="10.18" y2="3.82" fill="none" stroke-linecap="round" stroke-linejoin="round"></line></g>
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mode-moon" width="21" height="21" viewBox="0 0 14 14" stroke-width="1">
+                        <title>DARK</title>
+                        <g><circle cx="7" cy="7" r="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></circle><line x1="7" y1="0.5" x2="7" y2="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="2.4" y1="2.4" x2="3.82" y2="3.82" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="0.5" y1="7" x2="2.5" y2="7" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="2.4" y1="11.6" x2="3.82" y2="10.18" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="7" y1="13.5" x2="7" y2="11.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="11.6" y1="11.6" x2="10.18" y2="10.18" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="13.5" y1="7" x2="11.5" y2="7" fill="none" stroke-linecap="round" stroke-linejoin="round"></line><line x1="11.6" y1="2.4" x2="10.18" y2="3.82" fill="none" stroke-linecap="round" stroke-linejoin="round"></line></g>
+                    </svg>
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    @RenderBody()
+
+    <script async src="./assets/main.min.4ee188e1744c19816e95a540b2650ed9f033ea0371e74eac8e717355cfca8741.js"></script>
+    <script src="./assets/theme.min.8961c317c5b88b953fe27525839672c9343f1058ab044696ca225656c8ba2ab0.js"></script>
+
+</body>
+</html>

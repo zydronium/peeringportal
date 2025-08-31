@@ -1,4 +1,4 @@
-﻿using LUJEWebsite.PeeringGenerator.Models;
+﻿using LUJEWebsite.Library.Models;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
@@ -15,6 +15,8 @@ namespace LUJEWebsite.PeeringGenerator
             Filter.Run(config);
             Console.WriteLine("Running a ASN batch");
 			await ASNObjectGenerator.RunAsync();
+			Console.WriteLine("Running a AS-SET batch");
+			await ASSETObjectGenerator.RunAsync();
 			Console.WriteLine("Finished");
 		}
     }

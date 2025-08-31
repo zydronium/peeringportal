@@ -1,0 +1,108 @@
+﻿@page
+@using MySql.Data.MySqlClient;
+@using System.Collections;
+@using LUJEWebsite.Library.Utils;
+@{
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+	bool loggedin = false;
+	bool admin = false;
+	string accessToken = "";
+}
+
+@try
+{
+	MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+	await luje_conn.OpenAsync();
+
+	string upstream_id = HttpContext.Request.Query["id"];
+	string upstream_ips_id = HttpContext.Request.Query["delete"];
+	MySqlCommand luje_cmd = new MySqlCommand("select upstream_id, upstream_name, upstream_asn from upstream where upstream_id = @upstream_id and upstream_deleted = false;", luje_conn);
+	luje_cmd.Parameters.AddWithValue("@upstream_id", Convert.ToInt32(upstream_id));
+	await luje_cmd.PrepareAsync();
+	MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+	if (!await luje_rdr.ReadAsync())
+	{
+		await luje_rdr.CloseAsync();
+		Response.Redirect("./upstream");
+		await luje_conn.CloseAsync();
+		return;
+	}
+	else
+	{
+		await luje_rdr.CloseAsync();
+
+		if (Request.HasFormContentType && Request.Form != null && Request.Form.Keys.Count > 0)
+		{
+			string router = Request.Form["router"].FirstOrDefault().Trim();
+			string our = Request.Form["our"].FirstOrDefault().Trim();
+			string peer = Request.Form["peer"].FirstOrDefault().Trim();
+
+			if (router != "" && our != "" && peer != "")
+			{
+				luje_cmd = new MySqlCommand("select upstream_ips_id from upstream_ips where upstream_ips_addr_our = @our and upstream_ips_addr_peer = @peer and upstream_ips_deleted = false;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@our", our);
+				luje_cmd.Parameters.AddWithValue("@peer", peer);
+				await luje_cmd.PrepareAsync();
+				luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+				if (await luje_rdr.ReadAsync())
+				{
+					await luje_rdr.CloseAsync();
+				}
+				else
+				{
+					await luje_rdr.CloseAsync();
+
+					if (Utils.AreSameAddressFamily(our, peer)) {
+
+						int type = Utils.GetAddressFamily(our);
+
+						luje_cmd = new MySqlCommand("insert into upstream_ips (upstream_ips_router, upstream_ips_addr_our, upstream_ips_addr_peer, upstream_ips_type, upstream_ips_upstream_id, upstream_ips_deployed, upstream_ips_created, upstream_ips_modified, upstream_ips_deleted) values(@router, @our, @peer, @type, @upstream_id, 0, NOW(), NOW(), false);", luje_conn);
+						luje_cmd.Parameters.AddWithValue("@router", router);
+						luje_cmd.Parameters.AddWithValue("@our", our);
+						luje_cmd.Parameters.AddWithValue("@peer", peer);
+						luje_cmd.Parameters.AddWithValue("@type", Convert.ToInt32(type));
+						luje_cmd.Parameters.AddWithValue("@upstream_id", Convert.ToInt32(upstream_id));
+						await luje_cmd.PrepareAsync();
+						await luje_cmd.ExecuteNonQueryAsync();
+					}
+				}
+
+			}
+
+		}
+		else if (upstream_id != "" && upstream_ips_id != "")
+		{
+			luje_cmd = new MySqlCommand("select upstream_ips_id from upstream_ips where upstream_ips_id = @upstream_ips_id and upstream_ips_upstream_id = @upstream_id and upstream_ips_deleted = false;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@upstream_ips_id", Convert.ToInt32(upstream_ips_id));
+			luje_cmd.Parameters.AddWithValue("@upstream_id", Convert.ToInt32(upstream_id));
+			await luje_cmd.PrepareAsync();
+			luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+			if (await luje_rdr.ReadAsync())
+			{
+				await luje_rdr.CloseAsync();
+				luje_cmd = new MySqlCommand("update upstream_ips set upstream_ips_deleted = true, upstream_ips_modified = NOW() where upstream_ips_id = @upstream_ips_id and upstream_ips_upstream_id = @upstream_id and upstream_ips_deleted = false;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@upstream_ips_id", Convert.ToInt32(upstream_ips_id));
+				luje_cmd.Parameters.AddWithValue("@upstream_id", Convert.ToInt32(upstream_id));
+				await luje_cmd.PrepareAsync();
+				await luje_cmd.ExecuteNonQueryAsync();
+			}
+			else
+			{
+				await luje_rdr.CloseAsync();
+			}
+		}
+
+		Response.Redirect("./upstream_network?id=" + upstream_id);
+		await luje_conn.CloseAsync();
+		return;
+	}
+}
+catch (HttpRequestException e)
+{
+	Console.WriteLine("\nException Caught!");
+	Console.WriteLine("Message :{0} ", e.Message);
+}

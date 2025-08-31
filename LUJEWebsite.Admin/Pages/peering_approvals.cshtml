@@ -1,0 +1,87 @@
+﻿@page
+@using LUJEWebsite.Library.Utils;
+@using MySql.Data.MySqlClient;
+@{
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+	bool loggedin = false;
+	bool admin = false;
+	string accessToken = "";
+}
+
+@try
+{
+	MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+	await luje_conn.OpenAsync();
+
+	MySqlCommand luje_cmd = new MySqlCommand(@"select peering_ips.peering_ips_id, peering_ips.peering_ips_peeringdb_lanid, peering_ips.peering_ips_peeringdb_addrid, peering_ips.peering_ips_type, peering.peering_peeringdb_id, peeringdb_network_ixlan.id, peeringdb_ix.name as ix_name, peeringdb_network_ixlan.ixlan_id, peeringdb_network_ixlan.net_id, peeringdb_network_ixlan.ipaddr4, peeringdb_network_ixlan.ipaddr6, peeringdb_network.asn, peeringdb_network.name, owner_peeringdb_network_ixlan.id as ownerid, owner_peeringdb_network_ixlan.ipaddr4 as owneripaddr4, owner_peeringdb_network_ixlan.ipaddr6 as owneripaddr6
+from peering_ips
+inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false
+inner join peeringdb_network on peeringdb_network.id = peering_peeringdb_id and peeringdb_network.status = 'ok'
+inner join peeringdb_network_ixlan on peeringdb_network.id = peeringdb_network_ixlan.net_id and peeringdb_network_ixlan.status = 'ok'
+inner join peeringdb_ixlan on peeringdb_ixlan.id = peeringdb_network_ixlan.ixlan_id
+inner join peeringdb_network_ixlan as owner_peeringdb_network_ixlan on peeringdb_ixlan.id = owner_peeringdb_network_ixlan.ixlan_id and owner_peeringdb_network_ixlan.asn = @ownerasn and owner_peeringdb_network_ixlan.status = 'ok'
+inner join peeringdb_ix on peeringdb_ix.id = peeringdb_ixlan.ix_id and peeringdb_network_ixlan.id = peering_ips_peeringdb_addrid and peeringdb_network_ixlan.ixlan_id = peering_ips_peeringdb_lanid
+where peering_ips_active = false and peering_ips_rejected = false and peering_ips_deleted = false order by peering.peering_asn asc;", luje_conn);
+	luje_cmd.Parameters.AddWithValue("@ownerasn", Convert.ToInt32(Configuration.PortalOwnerAsn));
+	await luje_cmd.PrepareAsync();
+	MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+	<div class="wrapper post">
+		<main class="page-content" aria-label="Content">
+			<article>
+				<header class="header">
+					<h1 class="header-title">Peering Admin</h1>
+				</header>
+
+				<div class="page-content">
+					<h3>Approvals</h3>
+					<table width="100%">
+						<thead>
+							<tr>
+								<td width="20%">ASN</td>
+								<td width="20%">Name</td>
+								<td width="20%">IXP</td>
+								<td width="30%">IP Address</td>
+								<td width="10%"></td>
+							</tr>
+						</thead>
+						@while (luje_rdr.Read())
+						{
+							string addr = "";
+							string owneraddr = "";
+							string asn = "AS" + luje_rdr["asn"].ToString();
+							if (luje_rdr["peering_ips_type"].ToString() == "4")
+							{
+								addr = luje_rdr["ipaddr4"].ToString();
+								owneraddr = luje_rdr["owneripaddr4"].ToString();
+							}
+							else if (luje_rdr["peering_ips_type"].ToString() == "6")
+							{
+								addr = luje_rdr["ipaddr6"].ToString();
+								owneraddr = luje_rdr["owneripaddr6"].ToString();
+							}
+							<tr>
+								<td width="20%">@asn</td>
+								<td width="20%">@luje_rdr["name"].ToString()</td>
+								<td width="20%">@luje_rdr["ix_name"].ToString()</td>
+								<td width="30%">Peer: @addr<br />Ours: @owneraddr</td>
+								<td width="10%"><a href="./peering_approve?id=@luje_rdr["peering_ips_id"].ToString()&approve=y">Yes</a> <a onclick="if(confirm('Are you sure you want to not approve the session')){document.location.href='./peering_approve?id=@luje_rdr["peering_ips_id"].ToString()&approve=n';}" href="#">No</a></td>
+							</tr>
+						}
+						@{
+							await luje_rdr.CloseAsync();
+						}
+					</table>
+				</div>
+			</article>
+		</main>
+	</div>
+
+	await luje_conn.CloseAsync();
+}
+catch (HttpRequestException e)
+{
+	Console.WriteLine("\nException Caught!");
+	Console.WriteLine("Message :{0} ", e.Message);
+}

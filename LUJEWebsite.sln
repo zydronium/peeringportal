@@ -20,6 +20,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RPKI-Client", "RPKI-Client"
 		RPKI-Client\run.sh = RPKI-Client\run.sh
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LUJEWebsite.Admin", "LUJEWebsite.Admin\LUJEWebsite.Admin.csproj", "{F66EC76C-A033-474F-9890-9F78018D17FD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LUJEWebsite.PeeringApi", "LUJEWebsite.PeeringApi\LUJEWebsite.PeeringApi.csproj", "{862695CE-8471-4F78-BBD6-2CC46A79A2D1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LUJEWebsite.Library", "LUJEWebsite.Library\LUJEWebsite.Library.csproj", "{711B4FE1-D6E4-4FD1-8DA4-159E71F562A9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +44,18 @@ Global
 		{B71B0A00-E42E-47AB-8550-57AB4D73A72F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B71B0A00-E42E-47AB-8550-57AB4D73A72F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B71B0A00-E42E-47AB-8550-57AB4D73A72F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F66EC76C-A033-474F-9890-9F78018D17FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F66EC76C-A033-474F-9890-9F78018D17FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F66EC76C-A033-474F-9890-9F78018D17FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F66EC76C-A033-474F-9890-9F78018D17FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{862695CE-8471-4F78-BBD6-2CC46A79A2D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{862695CE-8471-4F78-BBD6-2CC46A79A2D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{862695CE-8471-4F78-BBD6-2CC46A79A2D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{862695CE-8471-4F78-BBD6-2CC46A79A2D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{711B4FE1-D6E4-4FD1-8DA4-159E71F562A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{711B4FE1-D6E4-4FD1-8DA4-159E71F562A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{711B4FE1-D6E4-4FD1-8DA4-159E71F562A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{711B4FE1-D6E4-4FD1-8DA4-159E71F562A9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

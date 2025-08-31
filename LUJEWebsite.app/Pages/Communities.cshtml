@@ -1,71 +1,72 @@
 ﻿@page
+@using LUJEWebsite.Library.Utils
+@using MySql.Data.MySqlClient;
 @{
     ViewData["Title"] = "Communities";
 }
 <div class="wrapper post">
-	<main class="page-content" aria-label="Content">
-		<article>
-			<header class="header">
-				<h1 class="header-title">BGP Communities</h1>
-			</header>
+    <main class="page-content" aria-label="Content">
+        <article>
+            <header class="header">
+                <h1 class="header-title">BGP Communities</h1>
+            </header>
 
-			<div class="page-content">
-				<p>LUJE.net uses the following communities:</p>
-				<table width="100%">
-					<thead>
-						<tr>
-							<td>Large</td>
-							<td width="100%">Meaning (Informational)</td>
-						</tr>
-					</thead>
-					<tr>
-						<td>212855:0:1</td>
-						<td width="100%">peering routes</td>
-					</tr>
-					<tr>
-						<td>212855:0:2</td>
-						<td width="100%">downstream routes</td>
-					</tr>
-					<tr>
-						<td></td>
-						<td width="100%"></td>
-					</tr>
-					<tr>
-						<td>212855:5:1</td>
-						<td width="100%">Accepted from peer because of valid IRR entry</td>
-					</tr>
-					<tr>
-						<td>212855:5:2</td>
-						<td width="100%">Accepted from peer because of valid ROA</td>
-					</tr>
-					<tr>
-						<td>212855:5:3</td>
-						<td width="100%">matching valid ROA exists</td>
-					</tr>
-					<tr>
-						<td>212855:5:4</td>
-						<td width="100%">Accepted while RPKI invalid because it is added to our whitelist</td>
-					</tr>
-					<tr>
-						<td></td>
-						<td width="100%"></td>
-					</tr>
-					<tr>
-						<td>212855:6:1</td>
-						<td width="100%">received from Netwerkvereniging Coloclue</td>
-					</tr>
-					<tr>
-						<td>212855:6:2</td>
-						<td width="100%">received from IPng Networks GmbH</td>
-					</tr>
-					<tr>
-						<td>212855:6:3</td>
-						<td width="100%">received from FREETRANSIT</td>
-					</tr>
-					<tr>
-						<td>212855:6:4</td>
-						<td width="100%">received from NetOne NL</td>
-					</tr>
+            <div class="page-content">
+                <p>AS212855/LUJE.net uses the following communities:</p>
+                <table width="100%">
+                    <thead>
+                        <tr>
+                            <td>Large</td>
+                            <td width="100%">Meaning (Informational)</td>
+                        </tr>
+                    </thead>
+                    <tr>
+                        <td>212855:0:1</td>
+                        <td width="100%">peering routes</td>
+                    </tr>
+                    <tr>
+                        <td>212855:0:2</td>
+                        <td width="100%">downstream routes</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td width="100%"></td>
+                    </tr>
+                    <tr>
+                        <td>212855:5:1</td>
+                        <td width="100%">Accepted from peer because of valid IRR entry</td>
+                    </tr>
+                    <tr>
+                        <td>212855:5:2</td>
+                        <td width="100%">Accepted from peer because of valid ROA</td>
+                    </tr>
+                    <tr>
+                        <td>212855:5:3</td>
+                        <td width="100%">matching valid ROA exists</td>
+                    </tr>
+                    <tr>
+                        <td>212855:5:4</td>
+                        <td width="100%">Accepted while RPKI invalid because it is added to our whitelist</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td width="100%"></td>
+                    </tr>
+                    @{
+                        MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+                        await luje_conn.OpenAsync();
+                        MySqlCommand luje_cmd = new MySqlCommand("select upstream_name, upstream_id from upstream where upstream_enabled = true and upstream_deleted = false order by upstream_id;", luje_conn);
+                        MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+                        while (await luje_rdr.ReadAsync())
+                        {
+                            <tr>
+                                <td>212855:6:@luje_rdr["upstream_id"].ToString()</td>
+                                <td width="100%">received from @luje_rdr["upstream_name"].ToString()</td>
+                            </tr>
+                        }
+                        await luje_rdr.CloseAsync();
+                        await luje_conn.CloseAsync();
+                    }
 				</table>
 
 				<table width="100%">

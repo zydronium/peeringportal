@@ -1,0 +1,84 @@
+﻿@page
+@using MySql.Data.MySqlClient;
+@using System.Collections;
+@using LUJEWebsite.Library.Utils;
+@{
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+	bool loggedin = false;
+	bool admin = false;
+	string accessToken = "";
+}
+
+@try
+{
+	MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+	await luje_conn.OpenAsync();
+
+	string upstream_id = HttpContext.Request.Query["delete"];
+	string name = "";
+	string asn = "";
+	if (Request.HasFormContentType && Request.Form != null && Request.Form.Keys.Count > 0)
+	{
+		name = Request.Form["name"].FirstOrDefault().Trim();
+		asn = Request.Form["asn"].FirstOrDefault().Trim();
+
+		if (name != "" && asn != "")
+		{
+			MySqlCommand luje_cmd = new MySqlCommand("select upstream_id from upstream where upstream_asn = @upstream_asn and upstream_deleted = false;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@upstream_asn", Convert.ToInt32(asn));
+			await luje_cmd.PrepareAsync();
+			MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+			if (await luje_rdr.ReadAsync())
+			{
+				await luje_rdr.CloseAsync();
+			}else{
+				await luje_rdr.CloseAsync();
+
+				luje_cmd = new MySqlCommand("insert into upstream (upstream_name, upstream_asn, upstream_eanbled, upstream_no_importexport, upstream_created, upstream_modified, upstream_deleted) values(@upstream_name, @upstream_asn, false, false, NOW(), NOW(), false);", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@upstream_name", name);
+				luje_cmd.Parameters.AddWithValue("@upstream_asn", Convert.ToInt32(asn));
+				await luje_cmd.PrepareAsync();
+				await luje_cmd.ExecuteNonQueryAsync();
+			}
+			
+		}
+		
+	}
+	else if (upstream_id != "")
+	{
+		MySqlCommand luje_cmd = new MySqlCommand("select upstream_id from upstream where upstream_id = @upstream_id and upstream_deleted = false;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@upstream_id", Convert.ToInt32(upstream_id));
+		await luje_cmd.PrepareAsync();
+		MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+		if (await luje_rdr.ReadAsync())
+		{
+			await luje_rdr.CloseAsync();
+			luje_cmd = new MySqlCommand("update upstream set upstream_deleted = true, upstream_modified = NOW() where upstream_id = @id and upstream_deleted = false;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@id", Convert.ToInt32(upstream_id));
+			await luje_cmd.PrepareAsync();
+			await luje_cmd.ExecuteNonQueryAsync();
+			luje_cmd = new MySqlCommand("update upstream_ips set upstream_ips_deleted = true, upstream_ips_modified = NOW() where upstream_ips_upstream_id = @upstream_id and upstream_ips_deleted = false;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@upstream_id", Convert.ToInt32(upstream_id));
+			await luje_cmd.PrepareAsync();
+			await luje_cmd.ExecuteNonQueryAsync();
+			luje_cmd = new MySqlCommand("update upstream_prefixes set upstream_prefixes_deleted = true, upstream_prefixes_modified = NOW() where upstream_prefixes_upstream_id = @upstream_id and upstream_prefixes_deleted = false;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@upstream_id", Convert.ToInt32(upstream_id));
+			await luje_cmd.PrepareAsync();
+			await luje_cmd.ExecuteNonQueryAsync();
+		}else{
+			await luje_rdr.CloseAsync();
+		}
+	}
+
+	Response.Redirect("./upstream");
+	await luje_conn.CloseAsync();
+	return;
+}
+catch (HttpRequestException e)
+{
+	Console.WriteLine("\nException Caught!");
+	Console.WriteLine("Message :{0} ", e.Message);
+}

@@ -5,7 +5,7 @@ CONFIG_FILE="/peeringconfig.json"
 
 # Output directory for RPKI-client
 RPKI_OUTPUT="/var/lib/rpki-client"
-RPKI_CACHE="$RPKI_OUTPUT/cache"
+RPKI_CACHE="/var/cache/rpki-client"
 RPKI_TA="$RPKI_OUTPUT/ta"
 
 # File to sync to the routers
@@ -33,7 +33,7 @@ if [ "$RPKI_ENABLED" = "true" ]; then
   fi
   chown -R _rpki-client:_rpki-client $RPKI_OUTPUT
   echo "Running RPKI-client..."
-  /usr/sbin/rpki-client -Bv $RPKI_OUTPUT
+  /usr/sbin/rpki-client -Bcjmov $RPKI_OUTPUT
 
   if [ $? -ne 0 ]; then
     echo "Error: RPKI-client failed."

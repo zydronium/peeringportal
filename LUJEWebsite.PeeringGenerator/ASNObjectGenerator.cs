@@ -1,8 +1,10 @@
-﻿using LUJEWebsite.PeeringGenerator.Models;
-using Npgsql;
+﻿using LUJEWebsite.Library.Models;
+using LUJEWebsite.Library.Utils;
+using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -23,29 +25,62 @@ namespace LUJEWebsite.PeeringGenerator
 				new RipeDatabaseAttribute { name = "as-name", value = "AS-LUJE" },
 				new RipeDatabaseAttribute { name = "descr", value = "LUJE.net" },
 				new RipeDatabaseAttribute { name = "org", value = "ORG-JL151-RIPE" },
-				new RipeDatabaseAttribute { name = "sponsoring-org", value = "ORG-NC22-RIPE" },
-				new RipeDatabaseAttribute { name = "remarks", value = "---" },
-				new RipeDatabaseAttribute { name = "remarks", value = "Upstreams:" },
-				new RipeDatabaseAttribute { name = "remarks", value = "Netwerkvereniging Coloclue" },
-				new RipeDatabaseAttribute { name = "mp-import", value = "from AS8283 accept ANY" },
-				new RipeDatabaseAttribute { name = "mp-export", value = $"to AS8283 announce {Configuration.PortalExport}" },
-				new RipeDatabaseAttribute { name = "remarks", value = "IPng Networks GmbH" },
-				new RipeDatabaseAttribute { name = "mp-import", value = "from AS8298 accept ANY" },
-				new RipeDatabaseAttribute { name = "mp-export", value = $"to AS8298 announce {Configuration.PortalExport}" },
-				new RipeDatabaseAttribute { name = "remarks", value = "FREETRANSIT" },
-				new RipeDatabaseAttribute { name = "mp-import", value = "from AS41051 accept ANY" },
-				new RipeDatabaseAttribute { name = "mp-export", value = $"to AS41051 announce {Configuration.PortalExport}" },
-				new RipeDatabaseAttribute { name = "remarks", value = "NetOne NL" },
-				new RipeDatabaseAttribute { name = "mp-import", value = "from AS200132 accept ANY" },
-				new RipeDatabaseAttribute { name = "mp-export", value = $"to AS200132 announce {Configuration.PortalExport}" },
-				new RipeDatabaseAttribute { name = "remarks", value = "---" },
-				new RipeDatabaseAttribute { name = "remarks", value = "Peerings:" }
+				new RipeDatabaseAttribute { name = "sponsoring-org", value = "ORG-NC22-RIPE" }
 			};
 
-			NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
+			MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
 			luje_conn.Open();
-			NpgsqlCommand luje_cmd = new NpgsqlCommand("select peering.peering_peeringdb_id, name, asn, irr_as_set from peering INNER JOIN peeringdb_network ON peeringdb_network.id = peering_peeringdb_id where peering_active = true and peering_deleted = false order by cast(peering_asn as integer) asc;", luje_conn);
-			NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+
+			MySqlCommand luje_cmd = new MySqlCommand("select downstream_name, downstream_asn, downstream_asset from downstream where downstream_public = true and downstream_enabled = true and downstream_deleted = false order by downstream_id;", luje_conn);
+			MySqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+			if (luje_rdr.HasRows)
+			{
+				asnAttributes.AddRange(new List<RipeDatabaseAttribute>
+				{
+					new RipeDatabaseAttribute { name = "remarks", value = "---" },
+					new RipeDatabaseAttribute { name = "remarks", value = "Downstreams:" }
+				});
+				while (luje_rdr.Read())
+				{
+					asnAttributes.AddRange(new List<RipeDatabaseAttribute>
+					{
+						new RipeDatabaseAttribute { name = "remarks", value = luje_rdr["downstream_name"].ToString() },
+						new RipeDatabaseAttribute { name = "mp-import", value = $"from AS{luje_rdr["downstream_asn"].ToString()} accept {luje_rdr["downstream_asset"].ToString()}" },
+						new RipeDatabaseAttribute { name = "mp-export", value = $"to AS{luje_rdr["downstream_asn"].ToString()} announce ANY" }
+					});
+				}
+			}
+			luje_rdr.Close();
+
+			luje_cmd = new MySqlCommand("select upstream_name, upstream_asn from upstream where upstream_enabled = true and upstream_deleted = false order by upstream_id;", luje_conn);
+			luje_rdr = luje_cmd.ExecuteReader();
+			if (luje_rdr.HasRows)
+			{
+				asnAttributes.AddRange(new List<RipeDatabaseAttribute>
+				{
+					new RipeDatabaseAttribute { name = "remarks", value = "---" },
+					new RipeDatabaseAttribute { name = "remarks", value = "Upstreams:" }
+				});
+				while (luje_rdr.Read())
+				{
+					asnAttributes.AddRange(new List<RipeDatabaseAttribute>
+					{
+						new RipeDatabaseAttribute { name = "remarks", value = luje_rdr["upstream_name"].ToString() },
+						new RipeDatabaseAttribute { name = "mp-import", value = $"from AS{luje_rdr["upstream_asn"].ToString()} accept ANY" },
+						new RipeDatabaseAttribute { name = "mp-export", value = $"to AS{luje_rdr["upstream_asn"].ToString()} announce {Configuration.PortalExport}" }
+					});
+				}
+			}
+			luje_rdr.Close();
+
+			asnAttributes.AddRange(new List<RipeDatabaseAttribute>
+			{
+				new RipeDatabaseAttribute { name = "remarks", value = "---" },
+				new RipeDatabaseAttribute { name = "remarks", value = "Peerings:" }
+			});
+
+			luje_cmd = new MySqlCommand("select peering.peering_peeringdb_id, name, asn, irr_as_set from peering INNER JOIN peeringdb_network ON peeringdb_network.id = peering_peeringdb_id where peering_active = true and peering_deleted = false order by cast(peering_asn as integer) asc;", luje_conn);
+			luje_rdr = luje_cmd.ExecuteReader();
 
 			var peeringList = new List<PeeringEntry>();
 
@@ -78,7 +113,7 @@ namespace LUJEWebsite.PeeringGenerator
 				}
 				else
 				{
-					asset = luje_rdr["asn"].ToString();
+					asset = $"AS{luje_rdr["asn"].ToString()}";
 				}
 
 				asnAttributes.AddRange(new List<RipeDatabaseAttribute>
@@ -89,12 +124,11 @@ namespace LUJEWebsite.PeeringGenerator
 				});
 			}
 			luje_rdr.Close();
-			luje_conn.Close();
 
 			asnAttributes.AddRange(new List<RipeDatabaseAttribute>
 			{
 				new RipeDatabaseAttribute { name = "remarks", value = "---" },
-				new RipeDatabaseAttribute { name = "remarks", value = "Peering with LUJE.net go to: https://www.luje.net" },
+				new RipeDatabaseAttribute { name = "remarks", value = "Peering with LUJE.net go to: https://as212855.net" },
 				new RipeDatabaseAttribute { name = "remarks", value = "---" },
 				new RipeDatabaseAttribute { name = "remarks", value = "Routing Policy" },
 				new RipeDatabaseAttribute { name = "remarks", value = "" },
@@ -107,28 +141,40 @@ namespace LUJEWebsite.PeeringGenerator
 				new RipeDatabaseAttribute { name = "remarks", value = "==========================" },
 				new RipeDatabaseAttribute { name = "remarks", value = "Large        | Meaning (Informational)" },
 				new RipeDatabaseAttribute { name = "remarks", value = "-------------|-------------------------------------" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:0:1   | peering routes" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:0:2   | downstream routes" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:0:1   | peering routes" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:0:2   | downstream routes" },
 				new RipeDatabaseAttribute { name = "remarks", value = "-------------+-------------------------------------" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:5:1   | Accepted from peer because of valid IRR entry" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:5:2   | Accepted from peer because of valid ROA" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:5:3   | matching valid ROA exists" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:5:4   | Accepted while RPKI invalid because it is added to our whitelist" },
-				new RipeDatabaseAttribute { name = "remarks", value = "-------------+-------------------------------------" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:6:1   | received from Netwerkvereniging Coloclue" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:6:2   | received from IPng Networks GmbH" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:6:3   | received from FREETRANSIT" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:6:4   | received from NetOne NL" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:5:1   | Accepted from peer because of valid IRR entry" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:5:2   | Accepted from peer because of valid ROA" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:5:3   | matching valid ROA exists" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:5:4   | Accepted while RPKI invalid because it is added to our whitelist" },
+				new RipeDatabaseAttribute { name = "remarks", value = "-------------+-------------------------------------" }
+			});
+
+			luje_cmd = new MySqlCommand("select upstream_name, upstream_id from upstream where upstream_enabled = true and upstream_deleted = false order by upstream_id;", luje_conn);
+			luje_rdr = luje_cmd.ExecuteReader();
+			while (luje_rdr.Read())
+			{
+				asnAttributes.AddRange(new List<RipeDatabaseAttribute>
+				{
+					new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:6:{luje_rdr["upstream_id"].ToString()}   | received from {luje_rdr["upstream_name"].ToString()}" }
+				});
+			}
+			luje_rdr.Close();
+			luje_conn.Close();
+
+			asnAttributes.AddRange(new List<RipeDatabaseAttribute>
+			{
 				new RipeDatabaseAttribute { name = "remarks", value = "-------------+-------------------------------------" },
 				new RipeDatabaseAttribute { name = "remarks", value = "" },
 				new RipeDatabaseAttribute { name = "remarks", value = "Large        | Rejection Reasons" },
 				new RipeDatabaseAttribute { name = "remarks", value = "-------------+-------------------------------------" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:7:1   | More specifics covering AS212855 space are considered hijacks" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:7:2   | Somewhere in the AS_PATH a Bogon ASN is present (0, 23456, 64496..65534, 4200000000+)" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:7:3   | The prefix is Bogon garbage (rfc1918, rfc4291 etc)" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:7:4   | The prefix is an RPKI Invalid and as such rejected" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:7:5   | The route's prefix length is unacceptable (too small or too large)" },
-				new RipeDatabaseAttribute { name = "remarks", value = "212855:7:6   | There is no IRR object that covers this route announcement" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:7:1   | More specifics covering AS{Configuration.PortalOwnerAsn} space are considered hijacks" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:7:2   | Somewhere in the AS_PATH a Bogon ASN is present (0, 23456, 64496..65534, 4200000000+)" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:7:3   | The prefix is Bogon garbage (rfc1918, rfc4291 etc)" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:7:4   | The prefix is an RPKI Invalid and as such rejected" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:7:5   | The route's prefix length is unacceptable (too small or too large)" },
+				new RipeDatabaseAttribute { name = "remarks", value = $"{Configuration.PortalOwnerAsn}:7:6   | There is no IRR object that covers this route announcement" },
 				new RipeDatabaseAttribute { name = "remarks", value = "-------------+-------------------------------------" },
 				new RipeDatabaseAttribute { name = "remarks", value = "" },
 				new RipeDatabaseAttribute { name = "remarks", value = "---" },

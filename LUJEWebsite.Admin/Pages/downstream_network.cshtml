@@ -1,0 +1,344 @@
+﻿@page
+@using MySql.Data.MySqlClient;
+@using Newtonsoft.Json
+@using System.Collections;
+@using LUJEWebsite.Library.Utils;
+@using LUJEWebsite.Library.Models;
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@{
+	string configFile = await System.IO.File.ReadAllTextAsync("peeringconfig.json");
+	Config config = JsonConvert.DeserializeObject<Config>(configFile);
+
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+	bool loggedin = false;
+	bool admin = false;
+	string accessToken = "";
+}
+
+@try
+{
+	MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+	await luje_conn.OpenAsync();
+
+	string downstream_id = HttpContext.Request.Query["id"];
+	MySqlCommand luje_cmd = new MySqlCommand("select downstream_id, downstream_name, downstream_asn, downstream_public, downstream_defaultroute, downstream_asset, downstream_enabled from downstream where downstream_id = @downstream_id and downstream_deleted = false;", luje_conn);
+	luje_cmd.Parameters.AddWithValue("@downstream_id", Convert.ToInt32(downstream_id));
+	await luje_cmd.PrepareAsync();
+	MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+	string name = "";
+	string asn = "";
+	string asset = "";
+	bool publicAsn = false;
+	bool defaultroute = false;
+	bool enabled = false;
+	if (!await luje_rdr.ReadAsync())
+	{
+		await luje_rdr.CloseAsync();
+		Response.Redirect("./downstream");
+		await luje_conn.CloseAsync();
+		return;
+	}
+	else
+	{
+		if (Request.HasFormContentType && Request.Form != null && Request.Form.Keys.Count > 0)
+		{
+			await luje_rdr.CloseAsync();
+			name = Request.Form["name"].FirstOrDefault().Trim();
+			asn = Request.Form["asn"].FirstOrDefault().Trim();
+			asset = Request.Form["asset"].FirstOrDefault().Trim();
+			var publicAsnString = Request.Form["public"].FirstOrDefault();
+			var defaultrouteString = Request.Form["defaultroute"].FirstOrDefault();
+			var enabledString = Request.Form["enabled"].FirstOrDefault();
+			if (publicAsnString == "1")
+			{
+				publicAsn = true;
+			}
+			else
+			{
+				publicAsn = false;
+			}
+			if (defaultrouteString == "1")
+			{
+				defaultroute = true;
+			}
+            else
+            {
+				defaultroute = false;
+			}
+			if (enabledString == "1")
+			{
+				enabled = true;
+			}
+			else
+			{
+				enabled = false;
+			}
+
+            if (name != "" && asn != "")
+			{
+				luje_cmd = new MySqlCommand("update downstream set downstream_name = @downstream_name, downstream_asn = @downstream_asn, downstream_asset = @downstream_asset, downstream_public = @downstream_public, downstream_defaultroute = @downstream_defaultroute, downstream_enabled = @downstream_enabled, downstream_modified = NOW() where downstream_id = @downstream_id and downstream_deleted = false;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@downstream_name", name);
+				luje_cmd.Parameters.AddWithValue("@downstream_asn", Convert.ToInt32(asn));
+                luje_cmd.Parameters.AddWithValue("@downstream_asset", asset);
+                luje_cmd.Parameters.AddWithValue("@downstream_public", publicAsn);
+				luje_cmd.Parameters.AddWithValue("@downstream_defaultroute", defaultroute);
+				luje_cmd.Parameters.AddWithValue("@downstream_enabled", enabled);
+                luje_cmd.Parameters.AddWithValue("@downstream_id", Convert.ToInt32(downstream_id));
+				await luje_cmd.PrepareAsync();
+				await luje_cmd.ExecuteNonQueryAsync();
+
+				Response.Redirect("./downstream_network?id=" + downstream_id);
+				await luje_conn.CloseAsync();
+				return;
+			}
+
+		}else{
+			name = luje_rdr["downstream_name"].ToString();
+			asn = luje_rdr["downstream_asn"].ToString();
+			asset = luje_rdr["downstream_asset"].ToString();
+            publicAsn = Convert.ToBoolean(luje_rdr["downstream_public"]);
+			defaultroute = Convert.ToBoolean(luje_rdr["downstream_defaultroute"]);
+			enabled = Convert.ToBoolean(luje_rdr["downstream_enabled"]);
+            await luje_rdr.CloseAsync();
+		}
+	}
+
+	<div class="wrapper post">
+		<main class="page-content" aria-label="Content">
+			<article>
+				<header class="header">
+					<h1 class="header-title">Downstream Admin</h1>
+				</header>
+
+				<div class="page-content">
+					<h3>@name</h3>
+					<form method="post" action="./downstream_network?id=@downstream_id">
+						<input type="hidden" name="__RequestVerificationToken" value="@Xsrf.GetAndStoreTokens(Model.HttpContext).RequestToken" />
+						<table width="100%">
+							<tr>
+								<td width="20%">Name</td>
+								<td width="80%"><input name="name" type="text" style="width:100%" value="@name" /></td>
+							</tr>
+							<tr>
+								<td width="20%">ASN</td>
+								<td width="80%"><input name="asn" type="number" style="width:100%" value="@asn" /></td>
+							</tr>
+							<tr>
+								<td width="20%">AS-SET</td>
+								<td width="80%"><input name="asset" type="text" style="width:100%" value="@asset" /></td>
+							</tr>
+                            <tr>
+                                <td width="20%">Public</td>
+								<td width="80%">
+									@if (publicAsn)
+									{
+										<input name="public" type="checkbox" value="1" checked>
+									}
+                                    else
+                                    {
+                                        <input name="public" type="checkbox" value="1">
+                                    }
+								</td>
+                            </tr>
+                            <tr>
+                                <td width="20%">Default Route</td>
+                                <td width="80%">
+                                    @if (defaultroute)
+                                    {
+                                        <input name="defaultroute" type="checkbox" value="1" checked>
+                                    }
+                                    else
+                                    {
+                                        <input name="defaultroute" type="checkbox" value="1">
+                                    }
+                                </td>
+							</tr>
+							<tr>
+								<td width="20%">enabled</td>
+								<td width="80%">
+									@if (enabled)
+									{
+										<input name="enabled" type="checkbox" value="1" checked>
+									}
+									else
+									{
+										<input name="enabled" type="checkbox" value="1">
+									}
+								</td>
+							</tr>
+							<tr>
+								<td width="20%"></td>
+								<td width="80%"><input type="submit" value="Change" /></td>
+							</tr>
+						</table>
+					</form>
+
+					<h3>Interconnects</h3>
+					@{
+						luje_cmd = new MySqlCommand("select downstream_ips_id, downstream_ips_addr_our, downstream_ips_addr_peer, downstream_ips_router, downstream_ips_type, downstream_ips_deployed from downstream_ips where downstream_ips_downstream_id = @downstream_id and downstream_ips_deleted = false;", luje_conn);
+						luje_cmd.Parameters.AddWithValue("@downstream_id", Convert.ToInt32(downstream_id));
+						await luje_cmd.PrepareAsync();
+						luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+						<form method="post" action="./downstream_ips?id=@downstream_id">
+							<input type="hidden" name="__RequestVerificationToken" value="@Xsrf.GetAndStoreTokens(Model.HttpContext).RequestToken" />
+							<table width="100%">
+								<tr>
+									<td width="20%">Router</td>
+									<td width="40%">IP Address</td>
+									<td width="20%">Status</td>
+									<td width="20%"></td>
+								</tr>
+								<tr>
+									<td width="20%"></td>
+									<td width="40%"></td>
+									<td width="20%"></td>
+									<td width="20%"></td>
+								</tr>
+								@while (luje_rdr.Read())
+								{
+									<tr>
+										<td width="20%">@luje_rdr["downstream_ips_router"].ToString()</td>
+										<td width="40%">Peer: @luje_rdr["downstream_ips_addr_peer"].ToString()<br>Our: @luje_rdr["downstream_ips_addr_our"].ToString()</td>
+										<td width="20%">
+											@{
+												string status = "";
+												if (enabled == false)
+												{
+													status = "Inactive";
+												}
+												else if (Convert.ToBoolean(luje_rdr["downstream_ips_deployed"]) == false)
+												{
+													status = "Pending deployment";
+												}
+												else
+												{
+													try
+													{
+														var neighboorName = $"downstream_AS{asn}_ipv{luje_rdr["downstream_ips_type"].ToString()}_{Utils.GetNeighborName(luje_rdr["downstream_ips_addr_peer"].ToString())}";
+														var hostname = config.RouterMapping[luje_rdr["downstream_ips_router"].ToString()].Hostname;
+														var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
+														status = Utils.GetInfoValue(birdlgOutput);
+													}
+													catch (Exception e)
+													{
+														status = "Deployed";
+													}
+												}
+											}
+											<span>@status</span>
+										</td>
+										<td width="20%"><a onclick="if(confirm('Are you sure you want to delete the interconnect')){document.location.href='./downstream_ips?id=@downstream_id&delete=@luje_rdr["downstream_ips_id"].ToString()';}" href="#">Delete</a></td>
+									</tr>
+								}
+								<tr>
+									<td width="20%">
+										<select name="router">
+											@foreach (var router in config.RouterMapping)
+											{
+												<option value="@router.Key">@router.Key</option>
+											}
+											
+										</select>
+									</td>
+									<td width="40%">Peer: <input name="peer" type="text" style="width:100%" /><br>Our:<input name="our" type="text" style="width:100%" /></td>
+									<td width="20%"></td>
+									<td width="20%"><input type="submit" value="Add" /></td>
+								</tr>
+							</table>
+						</form>
+						await luje_rdr.CloseAsync();
+					}
+
+					<h3>Extra Prefixes not RPKI valid</h3>
+					@{
+						luje_cmd = new MySqlCommand("select downstream_prefixes_id, downstream_prefixes_addr, downstream_prefixes_global from downstream_prefixes where downstream_prefixes_downstream_id = @downstream_id and downstream_prefixes_deleted = false;", luje_conn);
+						luje_cmd.Parameters.AddWithValue("@downstream_id", Convert.ToInt32(downstream_id));
+						await luje_cmd.PrepareAsync();
+						luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+						<form method="post" action="./downstream_prefixes?id=@downstream_id">
+							<input type="hidden" name="__RequestVerificationToken" value="@Xsrf.GetAndStoreTokens(Model.HttpContext).RequestToken" />
+							<table width="100%">
+								<tr>
+									<td width="70%">Prefix</td>
+									<td width="10%">Global</td>
+									<td width="20%"></td>
+								</tr>
+								<tr>
+									<td width="70%"></td>
+									<td width="10%"></td>
+									<td width="20%"></td>
+								</tr>
+								@while (await luje_rdr.ReadAsync())
+								{
+									<tr>
+										<td width="70%">@luje_rdr["downstream_prefixes_addr"].ToString()</td>
+										<td width="10%">
+											@if (luje_rdr["downstream_prefixes_global"].ToString() == "True")
+											{
+												<input type="checkbox" checked disabled>
+											}
+											else
+											{
+												<input type="checkbox" disabled>
+											}
+										</td>
+										<td width="20%"><a onclick="if(confirm('Are you sure you want to delete the prefix')){document.location.href='./downstream_prefixes?id=@downstream_id&delete=@luje_rdr["downstream_prefixes_id"].ToString()';}" href="#">Delete</a></td>
+									</tr>
+								}
+								<tr>
+									<td width="70%"><input name="prefix" type="text" style="width:100%" /></td>
+									<td width="10%"><input name="global" type="checkbox" value="1" checked></td>
+									<td width="20%"><input type="submit" value="Add" /></td>
+								</tr>
+							</table>
+						</form>
+						await luje_rdr.CloseAsync();
+					}
+
+
+
+					<h3>Extra ASNs Behind downstream</h3>
+					@{
+						luje_cmd = new MySqlCommand("select downstream_asns_id, downstream_asns_asn from downstream_asns where downstream_asns_downstream_id = @downstream_id and downstream_asns_deleted = false;", luje_conn);
+						luje_cmd.Parameters.AddWithValue("@downstream_id", Convert.ToInt32(downstream_id));
+						await luje_cmd.PrepareAsync();
+						luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+						<form method="post" action="./downstream_asns?id=@downstream_id">
+							<input type="hidden" name="__RequestVerificationToken" value="@Xsrf.GetAndStoreTokens(Model.HttpContext).RequestToken" />
+							<table width="100%">
+								<tr>
+									<td width="80%">ASN</td>
+									<td width="20%"></td>
+								</tr>
+								<tr>
+									<td width="80%"></td>
+									<td width="20%"></td>
+								</tr>
+								@while (await luje_rdr.ReadAsync())
+								{
+									<tr>
+										<td width="80%">AS@luje_rdr["downstream_asns_asn"].ToString()</td>
+										<td width="20%"><a onclick="if(confirm('Are you sure you want to delete the ASN')){document.location.href='./downstream_asns?id=@downstream_id&delete=@luje_rdr["downstream_asns_id"].ToString()';}" href="#">Delete</a></td>
+									</tr>
+								}
+								<tr>
+									<td width="80%"><input name="asn" type="text" style="width:100%" /></td>
+									<td width="20%"><input type="submit" value="Add" /></td>
+								</tr>
+							</table>
+						</form>
+						await luje_rdr.CloseAsync();
+					}
+				</div>
+			</article>
+		</main>
+	</div>
+	await luje_conn.CloseAsync();
+}
+catch (HttpRequestException e)
+{
+	Console.WriteLine("\nException Caught!");
+	Console.WriteLine("Message :{0} ", e.Message);
+}

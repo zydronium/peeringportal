@@ -10,6 +10,7 @@ namespace LUJEWebsite.Mailer
 	{
 		public string peering_ips_peering_id {  get; set; }
 		public string peering_ips_id { get; set; }
+		public string peering_ips_request_id { get; set; }
 		public string peering_ips_peeringdb_lanid { get; set; }
 		public string peering_ips_peeringdb_addrid { get; set; }
 		public string peering_ips_peeringdb_oaddrid { get; set; }
@@ -17,6 +18,7 @@ namespace LUJEWebsite.Mailer
 		public string peering_peeringdb_id { get; set; }
 		public bool peering_ips_active { get; set; }
 		public bool peering_ips_rejected { get; set; }
+		public bool peering_ips_deployed { get; set; }
 		public string peering_asn { get; set; }
 		public string peering_name { get; set; }
 		public string peering_ips_addr { get; set; }

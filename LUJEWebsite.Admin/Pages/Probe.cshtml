@@ -1,0 +1,113 @@
+﻿@page
+@using LUJEWebsite.Library.Utils;
+@using Newtonsoft.Json
+@using MySql.Data.MySqlClient;
+@using LUJEWebsite.Library.Models;
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@{
+	string configFile = await System.IO.File.ReadAllTextAsync("peeringconfig.json");
+	Config config = JsonConvert.DeserializeObject<Config>(configFile);
+
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+}
+
+@try
+{
+	MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+	await luje_conn.OpenAsync();
+
+	MySqlCommand luje_cmd = new MySqlCommand("select probes_id, probes_name, probes_asn, probes_addr_our, probes_addr_peer, probes_router, probes_type, probes_deployed from probes where probes_deleted = false order by probes_id;", luje_conn);
+	MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+	<div class="wrapper post">
+		<main class="page-content" aria-label="Content">
+			<article>
+				<header class="header">
+					<h1 class="header-title">Probe Admin</h1>
+				</header>
+
+				<div class="page-content">
+					<form method="post" action="./probe_manage">
+						<input type="hidden" name="__RequestVerificationToken" value="@Xsrf.GetAndStoreTokens(Model.HttpContext).RequestToken" />
+						<table width="100%">
+							<tr>
+								<td width="10%">Router</td>
+								<td width="20%">Name</td>
+								<td width="30%">IP Address</td>
+								<td width="20%">Status</td>
+								<td width="10%">ASN</td>
+								<td width="10%"></td>
+							</tr>
+							<tr>
+								<td width="10%"></td>
+								<td width="20%"></td>
+								<td width="30%"></td>
+								<td width="20%"></td>
+								<td width="10%"></td>
+								<td width="10%"></td>
+							</tr>
+							@while (luje_rdr.Read())
+							{
+								<tr>
+									<td width="10%">@luje_rdr["probes_router"].ToString()</td>
+									<td width="20%">@luje_rdr["probes_name"].ToString()</td>
+									<td width="30%">Peer: @luje_rdr["probes_addr_peer"].ToString()<br>Our: @luje_rdr["probes_addr_our"].ToString()</td>
+									<td width="20%">
+										@{
+											string status = "";
+											if (Convert.ToBoolean(luje_rdr["probes_deployed"]) == false)
+											{
+												status = "Pending deployment";
+											}
+											else
+											{
+												try
+												{
+													var neighboorName = $"probe_AS{luje_rdr["probes_asn"].ToString()}_ipv{luje_rdr["probes_type"].ToString()}_{Utils.GetNeighborName(luje_rdr["probes_addr_peer"].ToString())}";
+													var hostname = config.RouterMapping[luje_rdr["probes_router"].ToString()].Hostname;
+													var birdlgOutput = await Utils.GetBirdProtocolStatus(hostname, neighboorName);
+													status = Utils.GetInfoValue(birdlgOutput);
+												}
+												catch (Exception e)
+												{
+													status = "Deployed";
+												}
+											}
+										}
+										<span>@status</span>
+									</td>
+									<td width="10%">@luje_rdr["probes_asn"].ToString()</td>
+									<td width="10%"><a onclick="if(confirm('Are you sure you want to delete the probe')){document.location.href='./probe_manage?delete=@luje_rdr["probes_id"].ToString()';}" href="#">Delete</a></td>
+								</tr>
+							}
+							<tr>
+								<td width="10%">
+									<select name="router">
+										@foreach (var router in config.RouterMapping)
+										{
+											<option value="@router.Key">@router.Key</option>
+										}
+
+									</select>
+								</td>
+								<td width="20%"><input name="name" type="text" style="width:100%" /></td>
+								<td width="30%">Peer: <input name="peer" type="text" style="width:100%" /><br>Our: <input name="our" type="text" style="width:100%" /></td>
+								<td width="20%"></td>
+								<td width="10%"><input name="asn" type="number" style="width:100%" /></td>
+								<td width="10%"><input type="submit" value="Add" /></td>
+							</tr>
+						</table>
+					</form>
+				</div>
+			</article>
+		</main>
+	</div>
+	await luje_rdr.CloseAsync();
+	await luje_conn.CloseAsync();
+}
+catch (HttpRequestException e)
+{
+	Console.WriteLine("\nException Caught!");
+	Console.WriteLine("Message :{0} ", e.Message);
+}

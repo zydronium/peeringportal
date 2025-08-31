@@ -1,10 +1,9 @@
 ﻿@page
 @using Newtonsoft.Json.Linq;
 @using LUJEWebsite.app.Extentions;
-@using LUJEWebsite.app.Model;
+@using LUJEWebsite.Library.Models;
 @using LUJEWebsite.app.Utils;
 @{
-	HttpClient client = new HttpClient();
 	ViewData["Title"] = "Peering Portal";
 	bool loggedin = false;
 	bool admin = false;
@@ -29,7 +28,7 @@
 				</header>
 
 				<div class="page-content">
-					<p>You can request peering with LUJE.net via the Peering Portal.</p>
+					<p>You can request peering with AS212855/LUJE.net via the Peering Portal.</p>
 					<p>Simply login with your PeeringDB account and the Peering Portal will tell you at which internet exchange you can establish sessions and configure it automatically.</p>
 					<p><a href="/portal/login">Login with PeeringDB<br /><img src="~/assets/pdb-logo-coloured.png" /></a></p>
 				</div>
@@ -51,10 +50,6 @@ else
 
 					<div class="page-content">
 						<p>
-							@if (admin)
-							{
-								<span><a href="/portal/admin">Admin</a> -  </span>
-							}
 							<a href="/portal/logout">Logout</a> - <a href="/portal/">Portal Home</a>
 						</p>
 						<p>Welcome @profile.given_name.</p>

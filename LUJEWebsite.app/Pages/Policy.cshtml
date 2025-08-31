@@ -1,6 +1,13 @@
 ﻿@page
+@using Newtonsoft.Json;
+@using LUJEWebsite.Library.Models;
 @{
+
+    string configFile = await System.IO.File.ReadAllTextAsync("peeringconfig.json");
+    Config config = JsonConvert.DeserializeObject<Config>(configFile);
+
     ViewData["Title"] = "Policy";
+
 }
 <div class="wrapper post">
     <main class="page-content" aria-label="Content">
@@ -10,10 +17,21 @@
             </header>
 
             <div class="page-content">
-                <p>LUJE.net is a small network located in Amsterdam, the Netherlands.</p>
+                <p>AS212855/LUJE.net is a small network located in Amsterdam, the Netherlands.</p>
                 <p>
-                    LUJE.net has an open peering policy.<br>However there is strict IRR filtering and RPKI. Filters are generated every hour.<br>
-                    The provisioning of the configuration is done automatically from PeeringDB, please ensure your entry is kept up-to-date including IP addresses and number of prefixes announced.
+                    AS212855/LUJE.net has an open peering policy. We do however follow some guidelines for peering requests:
+                    <ul>
+                        <li>You must have a public ASN with at least one globally routable IPv4 or IPv6 prefix.</li>
+                        @if (config.Irr)
+                        {
+                            <li>Your IRR entries should be up-to-date.</li>
+                        }
+                        <li>Your PeeringDB entry should be up-to-date. The provisioning of the configuration is done automatically from PeeringDB</li>
+                        @if (config.Rpki)
+                        {
+                            <li>Make sure your RPKI certificates are valid. AS212855 does strict RPKI ROV and RPKI ASPA filtering.</li>
+                        }
+                    </ul>
                 </p>
                 <p>Please contact hostmaster [at] luje.net, use the <a href="/portal/">Peering Portal</a> or check out <a rel="noopener" href="https://www.peeringdb.com/asn/212855" target="_blank">PeeringDB</a> and <a rel="noopener" href="https://bgp.tools/as/212855" target="_blank">BGP.Tools</a>.</p>
             </div>

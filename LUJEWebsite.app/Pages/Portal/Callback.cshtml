@@ -1,9 +1,9 @@
 ﻿@page
+@using LUJEWebsite.Library.Utils
 @using Newtonsoft.Json;
 @using Newtonsoft.Json.Linq;
 @using LUJEWebsite.app.Extentions;
-@using LUJEWebsite.app.Model;
-@using LUJEWebsite.app.Utils;
+@using LUJEWebsite.Library.Models;
 @{
     HttpClient client = new HttpClient();
     dynamic peers = "";

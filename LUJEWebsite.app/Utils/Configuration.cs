@@ -1,6 +1,6 @@
 ﻿namespace LUJEWebsite.app.Utils
 {
-    public class Configuration
+    public class Configuration2
     {
 
 
@@ -49,6 +49,13 @@
 			{
 				return Environment.GetEnvironmentVariable("PEERINGDB_CLIENTSECRET");
 			}
-        }
-    }
+		}
+		public static string PgpPassword
+		{
+			get
+			{
+				return Environment.GetEnvironmentVariable("PGP_PASSWORD");
+			}
+		}
+	}
 }

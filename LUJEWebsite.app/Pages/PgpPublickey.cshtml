@@ -1,0 +1,8 @@
+﻿@page
+@{
+    Layout = "";
+    Response.ContentType = "text/plain";
+    // Read the file content
+    string publicKeyContent = await System.IO.File.ReadAllTextAsync("publickey.asc");
+}
+@Html.Raw(publicKeyContent)

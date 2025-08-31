@@ -1,0 +1,182 @@
+﻿@page
+@using MySql.Data.MySqlClient;
+@using System.Collections;
+@using LUJEWebsite.Library.Utils;
+@{
+	HttpClient client = new HttpClient();
+	ViewData["Title"] = "Peering Portal";
+	bool loggedin = false;
+	bool admin = false;
+	string accessToken = "";
+}
+
+@try
+{
+	MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+	await luje_conn.OpenAsync();
+
+	string asnQuery = Request.Query["asn"];
+	string asn = "";
+	string networkName = "";
+	string peeringdb_id = "";
+	string asset = "";
+
+	MySqlCommand luje_cmd = new MySqlCommand("select peeringdb_network.id, peeringdb_network.name, peeringdb_network.irr_as_set from peeringdb_network where asn = @asn;", luje_conn);
+	luje_cmd.Parameters.AddWithValue("@asn", Convert.ToInt32(asnQuery));
+	await luje_cmd.PrepareAsync();
+	MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+	if (await luje_rdr.ReadAsync())
+	{
+		asn = "AS" + asnQuery;
+		networkName = luje_rdr["name"].ToString();
+		peeringdb_id = luje_rdr["id"].ToString();
+		if (luje_rdr["irr_as_set"].ToString() != "")
+		{
+			asset = luje_rdr["irr_as_set"].ToString();
+			String[] spearator = { "::" };
+			String[] assetlist = asset.Split(spearator, StringSplitOptions.RemoveEmptyEntries);
+			if (assetlist.Count() == 1)
+			{
+				asset = assetlist[0];
+			}
+			else
+			{
+				asset = assetlist[1];
+			}
+		}
+		else
+		{
+			asset = "AS" + asnQuery;
+		}
+		await luje_rdr.CloseAsync();
+	}
+	else
+	{
+		await luje_rdr.CloseAsync();
+		Response.Redirect("./");
+		await luje_conn.CloseAsync();
+		return;
+	}
+
+	string addrid = HttpContext.Request.Query["delete"];
+	string addr = "";
+	if (Request.HasFormContentType && Request.Form != null && Request.Form.Keys.Count > 0)
+	{
+		addr = Request.Form["addr"].FirstOrDefault().Trim();
+	}
+	if (addrid == "" && addr == "")
+	{
+		Response.Redirect("./peering_network?asn=" + asnQuery);
+		await luje_conn.CloseAsync();
+		return;
+	}
+
+	luje_cmd = new MySqlCommand("select peering_id from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = false;", luje_conn);
+	luje_cmd.Parameters.AddWithValue("@peeringdb_id", Convert.ToInt32(peeringdb_id));
+	await luje_cmd.PrepareAsync();
+	luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+	string peering_id = "";
+
+	if (luje_rdr.Read())
+	{
+		peering_id = luje_rdr["peering_id"].ToString();
+		await luje_rdr.CloseAsync();
+	}
+	else
+	{
+		await luje_rdr.CloseAsync();
+		luje_cmd = new MySqlCommand("insert into peering (peering_peeringdb_id, peering_name, peering_as_set, peering_asn, peering_active, peering_aspa_upstream, peering_deployed, peering_created, peering_modified, peering_deleted) values(@peeringdb_id, @name, @asset, @asn, true, true, false, NOW(), NOW(), false);", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@peeringdb_id", Convert.ToInt32(peeringdb_id));
+		luje_cmd.Parameters.AddWithValue("@name", networkName);
+		luje_cmd.Parameters.AddWithValue("@asset", asset);
+		luje_cmd.Parameters.AddWithValue("@asn", Convert.ToInt32(asnQuery));
+		await luje_cmd.PrepareAsync();
+		await luje_cmd.ExecuteNonQueryAsync();
+
+		luje_cmd = new MySqlCommand("select peering_id from peering where peering_peeringdb_id = @peeringdb_id and peering_deleted = false;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@peeringdb_id", Convert.ToInt32(peeringdb_id));
+		await luje_cmd.PrepareAsync();
+		luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+		if (await luje_rdr.ReadAsync())
+		{
+			peering_id = luje_rdr["peering_id"].ToString();
+		}
+		await luje_rdr.CloseAsync();
+	}
+
+	//delete address
+	if (addrid != "")
+	{
+		luje_cmd = new MySqlCommand("select peering_ips_extra_active, peering_ips_extra_deployed, peering_ips_extra_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra_peering_id and peering_deleted = false where peering_ips_extra_id = @addrid and peering_peeringdb_id = @peeringdb_id and peering_ips_extra_deleted = false;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@peeringdb_id", Convert.ToInt32(peeringdb_id));
+		luje_cmd.Parameters.AddWithValue("@addrid", Convert.ToInt32(addrid));
+		await luje_cmd.PrepareAsync();
+		luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+
+		if (await luje_rdr.ReadAsync())
+		{
+			string peering_ips_extra_id = luje_rdr["peering_ips_extra_id"].ToString();
+			await luje_rdr.CloseAsync();
+			luje_cmd = new MySqlCommand("update peering_ips_extra set peering_ips_extra_deleted = true, peering_ips_extra_modified = NOW() where peering_ips_extra_id = @peering_ips_extra_id and peering_ips_extra_deleted = false;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@peering_ips_extra_id", Convert.ToInt32(peering_ips_extra_id));
+			await luje_cmd.PrepareAsync();
+			await luje_cmd.ExecuteNonQueryAsync();
+
+			int count = 0;
+
+			luje_cmd = new MySqlCommand("select peering.peering_id from peering_ips inner join peering on peering.peering_id = peering_ips.peering_ips_peering_id and peering.peering_deleted = false where peering_ips_deleted = false and peering_ips_rejected = false and peering.peering_id = @id;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@id", Convert.ToInt32(peering_id));
+			await luje_cmd.PrepareAsync();
+			luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+			if (!await luje_rdr.ReadAsync())
+			{
+				count++;
+			}
+			await luje_rdr.CloseAsync();
+
+			luje_cmd = new MySqlCommand("select peering.peering_id from peering_ips_extra inner join peering on peering.peering_id = peering_ips_extra.peering_ips_extra_peering_id and peering.peering_deleted = false where peering_ips_extra_deleted = false and peering.peering_id = @id;", luje_conn);
+			luje_cmd.Parameters.AddWithValue("@id", Convert.ToInt32(peering_id));
+			await luje_cmd.PrepareAsync();
+			luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
+			if (!await luje_rdr.ReadAsync())
+			{
+				count++;
+			}
+			await luje_rdr.CloseAsync();
+
+			if (count == 2)
+			{
+				luje_cmd = new MySqlCommand("update peering set peering_deleted = true, peering_modified = NOW() where peering_id = @id and peering_deleted = false;", luje_conn);
+				luje_cmd.Parameters.AddWithValue("@id", Convert.ToInt32(peering_id));
+				await luje_cmd.PrepareAsync();
+				await luje_cmd.ExecuteNonQueryAsync();
+			}
+
+		}
+		else
+		{
+			await luje_rdr.CloseAsync();
+		}
+	}
+
+	//add address
+	if (addr != "")
+	{
+		await luje_rdr.CloseAsync();
+		luje_cmd = new MySqlCommand("insert into peering_ips_extra (peering_ips_extra_peering_id, peering_ips_extra_addr, peering_ips_extra_active, peering_ips_extra_deployed, peering_ips_extra_created, peering_ips_extra_modified, peering_ips_extra_deleted) values(@peering_id, @addr, true, false, NOW(), NOW(), false);", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@peering_id", Convert.ToInt32(peering_id));
+		luje_cmd.Parameters.AddWithValue("@addr", addr);
+		await luje_cmd.PrepareAsync();
+		await luje_cmd.ExecuteNonQueryAsync();
+	}
+
+	Response.Redirect("./peering_network?asn=" + asnQuery);
+	await luje_conn.CloseAsync();
+}
+catch (HttpRequestException e)
+{
+	Console.WriteLine("\nException Caught!");
+	Console.WriteLine("Message :{0} ", e.Message);
+}

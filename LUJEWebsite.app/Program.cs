@@ -1,4 +1,4 @@
-using LUJEWebsite.app.Model;
+using LUJEWebsite.Library.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;

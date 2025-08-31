@@ -1,0 +1,27 @@
+﻿@page
+@using LUJEWebsite.Library.Utils
+@using PgpCore;
+@using System.IO
+@{
+    Layout = "";
+    Response.ContentType = "text/plain";
+
+    // Generate the content of security.txt
+    string securityTxt = $@"Contact: https://www.as212855.net/contact
+Expires: {DateTime.UtcNow.AddMonths(1):o}
+Preferred-Languages: nl,en
+Canonical: https://{Request.Host.ToString()}/.well-known/security.txt
+Encryption: https://{Request.Host.ToString()}/.well-known/pgp-key.asc";
+
+    string signedContent;
+    using (var privateKeyStream = new FileStream("privatekey.asc", FileMode.Open, FileAccess.Read))
+    {
+        EncryptionKeys encryptionKeys = new EncryptionKeys(privateKeyStream, Configuration.PgpPassword);
+
+        PGP pgp = new PGP(encryptionKeys);
+
+        // Sign
+        signedContent = await pgp.ClearSignAsync(securityTxt);
+    }
+}
+@(Html.Raw(signedContent))

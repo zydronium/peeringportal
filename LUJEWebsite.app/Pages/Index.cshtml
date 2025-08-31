@@ -1,8 +1,7 @@
 ﻿@page
 @using System.Collections;
-@using LUJEWebsite.app.Utils;
-@using Npgsql;
-@using NpgsqlTypes;
+@using LUJEWebsite.Library.Utils;
+@using MySql.Data.MySqlClient;
 @{
     ViewData["Title"] = "Home";
     var ixList = new ArrayList();
@@ -10,31 +9,31 @@
 
     try
     {
-		NpgsqlConnection luje_conn = new NpgsqlConnection(Configuration.DBPath);
-		luje_conn.Open();
+		MySqlConnection luje_conn = new MySqlConnection(Configuration.DBPath);
+		await luje_conn.OpenAsync();
 
-		NpgsqlCommand luje_cmd = new NpgsqlCommand("select peeringdb_ix.name, peeringdb_ix.name_long from peeringdb_network_ixlan inner join peeringdb_ixlan on peeringdb_network_ixlan.ixlan_id = peeringdb_ixlan.id inner join peeringdb_ix on peeringdb_ixlan.ix_id = peeringdb_ix.id where peeringdb_network_ixlan.asn = @portalowner;", luje_conn);
-		luje_cmd.Parameters.AddWithValue("@portalowner", NpgsqlDbType.Integer, Convert.ToInt32(Configuration.PortalOwnerAsn));
+		MySqlCommand luje_cmd = new MySqlCommand("select distinct peeringdb_ix.name, peeringdb_ix.name_long from peeringdb_network_ixlan inner join peeringdb_ixlan on peeringdb_network_ixlan.ixlan_id = peeringdb_ixlan.id inner join peeringdb_ix on peeringdb_ixlan.ix_id = peeringdb_ix.id where peeringdb_network_ixlan.asn = @portalowner and peeringdb_network_ixlan.status = 'ok';", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@portalowner", Convert.ToInt32(Configuration.PortalOwnerAsn));
 		luje_cmd.Prepare();
-		NpgsqlDataReader luje_rdr = luje_cmd.ExecuteReader();
+		MySqlDataReader luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
 		while (luje_rdr.Read())
 		{
 			var ix = new { name = luje_rdr["name"].ToString(), name_long = luje_rdr["name_long"].ToString() };
 			ixList.Add(ix);
 		}
-		luje_rdr.Close();
+		await luje_rdr.CloseAsync();
 
-		luje_cmd = new NpgsqlCommand("select peeringdb_facility.name from peeringdb_network_facility inner join peeringdb_facility on peeringdb_network_facility.fac_id = peeringdb_facility.id where peeringdb_network_facility.local_asn = @portalowner;", luje_conn);
-		luje_cmd.Parameters.AddWithValue("@portalowner", NpgsqlDbType.Integer, Convert.ToInt32(Configuration.PortalOwnerAsn));
+		luje_cmd = new MySqlCommand("select peeringdb_facility.name from peeringdb_network_facility inner join peeringdb_facility on peeringdb_network_facility.fac_id = peeringdb_facility.id inner join peeringdb_network on peeringdb_network_facility.net_id = peeringdb_network.id and peeringdb_network.asn = @portalowner;", luje_conn);
+		luje_cmd.Parameters.AddWithValue("@portalowner", Convert.ToInt32(Configuration.PortalOwnerAsn));
 		luje_cmd.Prepare();
-		luje_rdr = luje_cmd.ExecuteReader();
+		luje_rdr = (MySqlDataReader)await luje_cmd.ExecuteReaderAsync();
 		while (luje_rdr.Read())
 		{
 			var fac = new { name = luje_rdr["name"].ToString() };
 			facList.Add(fac);
 		}
-		luje_rdr.Close();
-		luje_conn.Close();
+		await luje_rdr.CloseAsync();
+		await luje_conn.CloseAsync();
 	}
 	catch (HttpRequestException e)
 	{
@@ -47,7 +46,7 @@
 	<main class="page-content" aria-label="Content">
 		<article>
 			<header class="header">
-				<h1 class="header-title">Welcome to LUJE.net - AS212855</h1>
+				<h1 class="header-title">Welcome to AS212855/LUJE.net</h1>
 			</header>
 
 			<div class="page-content">

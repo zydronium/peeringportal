@@ -8,10 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
-    <PackageReference Include="MySqlConnector" Version="2.3.7" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
+    <PackageReference Include="MySql.Data" Version="9.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Npgsql" Version="8.0.5" />
+    <PackageReference Include="PgpCore" Version="6.5.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LUJEWebsite.Library\LUJEWebsite.Library.csproj" />
   </ItemGroup>
 
 </Project>

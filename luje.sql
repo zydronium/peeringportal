@@ -47,6 +47,8 @@ CREATE TABLE public.peering (
     peering_as_set character varying(255),
     peering_asn character varying(255),
     peering_active boolean,
+    peering_aspa_upstream boolean,
+    peering_role_overwrite character varying(255),
     peering_deployed boolean,
     peering_created timestamp without time zone,
     peering_modified timestamp without time zone,
@@ -76,6 +78,7 @@ CREATE TABLE public.peering_acl (
 
 CREATE TABLE public.peering_ips (
     peering_ips_id integer NOT NULL,
+    peering_ips_request_id uuid NOT NULL,
     peering_ips_peering_id integer NOT NULL,
     peering_ips_peeringdb_lanid integer NOT NULL,
     peering_ips_peeringdb_addrid integer NOT NULL,
@@ -103,6 +106,7 @@ CREATE TABLE public.peering_ips_extra (
     peering_ips_extra_id integer NOT NULL,
     peering_ips_extra_peering_id integer NOT NULL,
     peering_ips_extra_addr character varying(255),
+    peering_ips_extra_multihop integer NULL,
     peering_ips_extra_active boolean,
     peering_ips_extra_deployed boolean,
     peering_ips_extra_created timestamp without time zone,
@@ -251,3 +255,53 @@ ALTER TABLE ONLY public.peering
 -- PostgreSQL database dump complete
 --
 
+
+-- new tables
+
+CREATE TABLE public.upstream (
+	upstream_id serial4 NOT NULL,
+	upstream_name varchar NULL,
+	upstream_asn int4 NULL,
+	upstream_created timestamp NULL,
+	upstream_modified timestamp NULL,
+	upstream_deleted bool NULL,
+	CONSTRAINT upstream_pk PRIMARY KEY (upstream_id)
+);
+
+CREATE TABLE public.upstream_ips (
+	upstream_ips_id serial4 NOT NULL,
+	upstream_ips_upstream_id int4 NOT NULL,
+	upstream_ips_addr_our varchar NOT NULL,
+	upstream_ips_addr_peer varchar NOT NULL,
+	upstream_ips_type int4 NOT NULL,
+	upstream_ips_router varchar NOT NULL,
+	upstream_ips_created timestamp NOT NULL,
+	upstream_ips_modified timestamp NOT NULL,
+	upstream_ips_deleted bool NULL,
+	CONSTRAINT upstream_ips_pk PRIMARY KEY (upstream_ips_id)
+);
+
+CREATE TABLE public.upstream_prefixes (
+	upstream_prefixes_id serial4 NOT NULL,
+	upstream_prefixes_upstream_id int4 NOT NULL,
+	upstream_prefixes_addr varchar NOT NULL,
+	upstream_prefixes_type int4 NOT NULL,
+	upstream_prefixes_created timestamp NOT NULL,
+	upstream_prefixes_modified timestamp NOT NULL,
+	upstream_prefixes_deleted bool NULL,
+	CONSTRAINT upstream_prefixes_pk PRIMARY KEY (upstream_prefixes_id)
+);
+
+CREATE TABLE public.probes (
+	probes_id serial4 NOT NULL,
+	probes_name varchar NULL,
+	probes_router varchar NULL,
+	probes_asn int4 NULL,
+	probes_type int4 NULL,
+	probes_addr_our varchar NULL,
+	probes_addr_peer varchar NULL,
+	probes_created timestamp NULL,
+	probes_modified timestamp NULL,
+	probes_deleted bool NULL,
+	CONSTRAINT probes_pk PRIMARY KEY (probes_id)
+);
